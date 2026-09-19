@@ -1,7 +1,7 @@
 services:
   - type: web
     name: pdf-chat-app
-    env: node
+    runtime: node
     plan: free
     region: oregon
     buildCommand: npm run build
