@@ -163,5 +163,6 @@ Render will build the frontend with Vite, install backend dependencies, and laun
 
 ---
 
-## 📄 License
-MIT License — Created by [Rakesh Kushwaha](https://github.com/RAKESHKUSHWAHA7518).
+## 📄 Copyright & Ownership
+Proprietary & Confidential — © 2026 [Rakesh Kushwaha](https://github.com/RAKESHKUSHWAHA7518). All rights reserved.
+
