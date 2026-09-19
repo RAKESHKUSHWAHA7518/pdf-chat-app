@@ -52,6 +52,14 @@ function shutdown(signal) {
   }, 10_000).unref();
 }
 
+process.on("unhandledRejection", (reason) => {
+  logger.warn({ reason }, "Unhandled promise rejection captured (server protected)");
+});
+
+process.on("uncaughtException", (err) => {
+  logger.error({ err }, "Uncaught exception captured (server protected)");
+});
+
 process.on("SIGTERM", () => shutdown("SIGTERM"));
 process.on("SIGINT", () => shutdown("SIGINT"));
 

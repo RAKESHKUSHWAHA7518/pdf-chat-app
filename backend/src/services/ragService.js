@@ -18,11 +18,13 @@ const model = new ChatGoogleGenerativeAI({
   model: env.GEMINI_CHAT_MODEL,
   apiKey: env.GEMINI_API_KEY,
   temperature: 0,
+  maxRetries: 3,
 });
 
 const embeddingsModel = new GoogleGenerativeAIEmbeddings({
   model: env.GEMINI_EMBEDDING_MODEL,
   apiKey: env.GEMINI_API_KEY,
+  maxRetries: 3,
 });
 
 // When a GUEST session is deleted or expires, remove its vectors from MongoDB.

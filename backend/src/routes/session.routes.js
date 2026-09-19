@@ -128,21 +128,40 @@ sessionRouter.post("/chat", validate(chatSchema), async (req, res) => {
   res.flushHeaders();
 
   let fullResponse = "";
+  let clientAborted = false;
+
+  req.on("close", () => {
+    clientAborted = true;
+  });
 
   try {
-    const stream = await session.ragChain.stream({
-      question,
-      history: session.history,
-    });
+    try {
+      const stream = await session.ragChain.stream({
+        question,
+        history: session.history,
+      });
 
-    for await (const chunk of stream) {
-      // Stop processing if the client disconnected
-      if (res.writableEnded) break;
-      fullResponse += chunk;
-      res.write(`data: ${JSON.stringify({ chunk })}\n\n`);
+      for await (const chunk of stream) {
+        if (clientAborted || res.writableEnded) break;
+        fullResponse += chunk;
+        res.write(`data: ${JSON.stringify({ chunk })}\n\n`);
+      }
+    } catch (streamErr) {
+      log.warn({ streamErr }, "Chat stream interrupted, attempting non-streaming fallback");
+      if (!fullResponse && !clientAborted && !res.writableEnded) {
+        // Fallback to non-streaming invoke if stream failed before writing response
+        const fallbackAnswer = await session.ragChain.invoke({
+          question,
+          history: session.history,
+        });
+        fullResponse = fallbackAnswer;
+        res.write(`data: ${JSON.stringify({ chunk: fallbackAnswer })}\n\n`);
+      } else if (!fullResponse) {
+        throw streamErr;
+      }
     }
 
-    if (!res.writableEnded) {
+    if (!res.writableEnded && fullResponse) {
       // Save to conversation history
       session.history.push(new HumanMessage(question));
       session.history.push(new AIMessage(fullResponse));
@@ -157,7 +176,7 @@ sessionRouter.post("/chat", validate(chatSchema), async (req, res) => {
       log.info({ answerLength: fullResponse.length }, "Answer streamed");
     }
   } catch (err) {
-    log.error({ err }, "Chat stream failed");
+    log.error({ err }, "Chat response failed");
     if (!res.writableEnded) {
       res.write(`data: ${JSON.stringify({ error: "Failed to generate an answer" })}\n\n`);
       res.end();
