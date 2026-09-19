@@ -1,0 +1,26 @@
+{
+  "name": "ai-pdf-chat-app",
+  "version": "1.0.0",
+  "description": "AI-Powered PDF Chat & Document Intelligence Platform with LangChain, Gemini, and MongoDB Atlas Vector Search",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "install:all": "npm --prefix frontend install && npm --prefix backend install",
+    "build": "npm --prefix frontend install && npm --prefix frontend run build && npm --prefix backend install",
+    "start": "node backend/src/server.js",
+    "dev:backend": "npm --prefix backend run dev",
+    "dev:frontend": "npm --prefix frontend run dev"
+  },
+  "keywords": [
+    "rag",
+    "gemini",
+    "langchain",
+    "pdf-chat",
+    "vector-search",
+    "mongodb-atlas",
+    "react",
+    "nodejs"
+  ],
+  "author": "Rakesh Kushwaha",
+  "license": "MIT"
+}

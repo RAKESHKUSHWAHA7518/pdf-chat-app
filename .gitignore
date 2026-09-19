@@ -1,0 +1,29 @@
+# Dependencies
+node_modules/
+*/node_modules/
+
+# Production Builds (built on deploy)
+dist/
+frontend/dist/
+
+# Environment Secrets — NEVER commit
+.env
+.env.*
+!.env.example
+backend/.env
+frontend/.env
+
+# Local runtime data
+backend/data/
+backend/uploads/
+
+# Logs
+*.log
+npm-debug.log*
+
+# System & IDE files
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+.mcp.json
