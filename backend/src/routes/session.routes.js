@@ -14,6 +14,7 @@ import { processPdf } from "../services/ragService.js";
 import { deleteSessionVectors } from "../lib/vectorStore.js";
 import { saveUserDocument } from "../services/documentService.js";
 import { hasGuestQuota, recordGuestUpload, getGuestQuota } from "../services/guestService.js";
+import { deductCredit } from "../services/paymentService.js";
 import { validate } from "../middleware/validate.js";
 import { uploadLimiter } from "../middleware/rateLimiter.js";
 import { getGuestId } from "../middleware/auth.js";
@@ -71,7 +72,13 @@ sessionRouter.post("/upload", uploadLimiter, upload.single("pdf"), async (req, r
     log.info({ pageCount, chunkCount }, "PDF indexed");
 
     // Only count the upload after it processed successfully
-    if (guestId) await recordGuestUpload(guestId);
+    if (guestId) {
+      await recordGuestUpload(guestId);
+    } else if (req.userId) {
+      // Deduct credit for authenticated users (if no active subscription)
+      const creditResult = await deductCredit(req.userId, sessionId);
+      log.info({ creditsRemaining: creditResult.creditsRemaining, subscription: creditResult.subscription }, "Credit deducted");
+    }
 
     // Signed-in users: persist the document so it survives browser closes
     // and server restarts (previous uploads are kept — full library).

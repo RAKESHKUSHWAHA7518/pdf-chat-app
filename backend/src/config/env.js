@@ -36,6 +36,15 @@ const envSchema = z.object({
   RATE_LIMIT_WINDOW_MS: z.coerce.number().int().positive().default(60_000),
   RATE_LIMIT_MAX: z.coerce.number().int().positive().default(60),
   UPLOAD_RATE_LIMIT_MAX: z.coerce.number().int().positive().default(10),
+
+  // Razorpay Payments
+  RAZORPAY_KEY_ID: z.string().optional(),
+  RAZORPAY_KEY_SECRET: z.string().optional(),
+  RAZORPAY_WEBHOOK_SECRET: z.string().optional(),
+  RAZORPAY_CREDITS_PACK_10_AMOUNT: z.coerce.number().int().positive().default(29900),
+  RAZORPAY_CREDITS_PACK_50_AMOUNT: z.coerce.number().int().positive().default(129900),
+  RAZORPAY_PRO_MONTHLY_AMOUNT: z.coerce.number().int().positive().default(29900),
+  RAZORPAY_PRO_YEARLY_AMOUNT: z.coerce.number().int().positive().default(299000),
 });
 
 const parsed = envSchema.safeParse(process.env);

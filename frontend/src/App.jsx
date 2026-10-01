@@ -1,6 +1,8 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import ReactMarkdown from "react-markdown";
 import AuthModal from "./components/AuthModal.jsx";
+import CreditBalance from "./components/CreditBalance.jsx";
+import PricingPage from "./components/PricingPage.jsx";
 import {
   API_URL,
   authHeaders,
@@ -42,6 +44,7 @@ export default function App() {
   const [auth, setAuth] = useState(getStoredAuth);     // { token, email } | null
   const [guestQuota, setGuestQuota] = useState(null);  // { used, limit, remaining } for guests
   const [showAuthModal, setShowAuthModal] = useState(false);
+  const [showPricing, setShowPricing] = useState(false);
   const [documents, setDocuments] = useState([]);      // saved PDFs (signed-in users)
 
   const fileInputRef = useRef(null);
@@ -374,9 +377,15 @@ export default function App() {
                   <span className="auth-plan">✨ Unlimited uploads</span>
                 </div>
               </div>
-              <button className="auth-logout-btn" onClick={handleLogout}>
-                Log out
-              </button>
+              <CreditBalance auth={auth} />
+              <div className="auth-user-actions">
+                <button className="auth-pricing-btn" onClick={() => setShowPricing(true)}>
+                  Manage Plan
+                </button>
+                <button className="auth-logout-btn" onClick={handleLogout}>
+                  Log out
+                </button>
+              </div>
             </div>
           ) : (
             <div className="auth-guest">
@@ -603,6 +612,11 @@ export default function App() {
       {/* Signup wall */}
       {showAuthModal && (
         <AuthModal onClose={() => setShowAuthModal(false)} onSuccess={handleAuthSuccess} />
+      )}
+
+      {/* Pricing modal */}
+      {showPricing && (
+        <PricingPage auth={auth} onClose={() => setShowPricing(false)} />
       )}
     </div>
   );

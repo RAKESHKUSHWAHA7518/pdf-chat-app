@@ -6,6 +6,7 @@ import { connectDatabase, ensureIndexes, ensureVectorSearchIndex, closeDatabase 
 import { probeEmbeddingDimensions } from "./services/ragService.js";
 import { sessionService } from "./services/sessionService.js";
 
+const app = createApp();
 let server;
 
 async function main() {
@@ -30,8 +31,6 @@ async function main() {
     );
   });
 }
-
-const app = createApp();
 
 // ─────────────────────────────────────────────
 // Graceful shutdown — finish in-flight requests, then exit

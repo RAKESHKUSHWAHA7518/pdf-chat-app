@@ -85,3 +85,28 @@ export const openDocument = (auth, sessionId) =>
 
 export const deleteDocument = (auth, sessionId) =>
   callApi(`/documents/${sessionId}`, auth, { method: "DELETE" });
+
+// ── Payments & Credits ──
+export const getCreditBalance = (auth) =>
+  callApi("/payments/credits/balance", auth).then((d) => d);
+
+export const getCreditPacks = (auth) =>
+  callApi("/payments/credits/packs", auth).then((d) => d.packs);
+
+export const getSubscriptionPlans = (auth) =>
+  callApi("/payments/subscription/plans", auth).then((d) => d.plans);
+
+export const createCreditsOrder = (auth, packId) =>
+  callApi("/payments/credits/order", auth, { method: "POST", body: JSON.stringify({ packId }) });
+
+export const createSubscriptionOrder = (auth, planId) =>
+  callApi("/payments/subscription/order", auth, { method: "POST", body: JSON.stringify({ planId }) });
+
+export const verifyPayment = (auth, paymentData) =>
+  callApi("/payments/verify", auth, { method: "POST", body: JSON.stringify(paymentData) });
+
+export const getPaymentHistory = (auth) =>
+  callApi("/payments/history", auth).then((d) => d.payments);
+
+export const getCreditTransactions = (auth) =>
+  callApi("/payments/transactions", auth).then((d) => d.transactions);

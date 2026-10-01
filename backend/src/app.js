@@ -13,6 +13,7 @@ import { healthRouter } from "./routes/health.routes.js";
 import { authRouter } from "./routes/auth.routes.js";
 import { sessionRouter } from "./routes/session.routes.js";
 import { documentRouter } from "./routes/document.routes.js";
+import { paymentRouter } from "./routes/payment.routes.js";
 import { apiLimiter } from "./middleware/rateLimiter.js";
 import { optionalAuth } from "./middleware/auth.js";
 import { errorHandler, notFoundHandler } from "./middleware/errorHandler.js";
@@ -63,11 +64,12 @@ export function createApp() {
   // Attach req.userId when a valid JWT is present (all /api routes)
   app.use("/api", optionalAuth);
 
-  // API Routes
+// API Routes
   app.use("/api", healthRouter);
   app.use("/api/auth", authRouter);
   app.use("/api", documentRouter);
   app.use("/api", sessionRouter);
+  app.use("/api/payments", paymentRouter);
 
   // Serve React Frontend static assets if dist exists
   if (fs.existsSync(frontendDist)) {

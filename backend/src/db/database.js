@@ -1,10 +1,13 @@
 // src/db/database.js — MongoDB connection, collections, and index management.
 //
 // Data model:
-//   users        — { _id, email (unique), passwordHash, createdAt }
-//   guest_usage  — { _id: guestId, uploadsUsed, createdAt, updatedAt }
-//   documents    — { sessionId, text, metadata, embedding: [float], createdAt }
-//                  + Atlas Vector Search index on `embedding` (sessionId as filter)
+//   users               — { _id, email (unique), passwordHash, createdAt, credits, subscription }
+//   guest_usage         — { _id: guestId, uploadsUsed, createdAt, updatedAt }
+//   documents           — { sessionId, text, metadata, embedding: [float], createdAt }
+//                         + Atlas Vector Search index on `embedding` (sessionId as filter)
+//   user_documents      — { _id, userId, sessionId, fileName, pageCount, chunkCount, createdAt }
+//   payments            — { _id, userId, razorpayOrderId, razorpayPaymentId, razorpaySignature, amount, currency, type, creditsGranted, planId, status, createdAt, paidAt }
+//   credit_transactions — { _id, userId, amount, type, referenceId, description, balanceAfter, createdAt }
 import { MongoClient } from "mongodb";
 
 import { env } from "../config/env.js";
@@ -57,6 +60,9 @@ export const collections = {
   documents: () => getDb().collection("documents"),
   // signed-in user's current document (one per user) — enables restore-after-close
   userDocuments: () => getDb().collection("user_documents"),
+  // Payments & credits
+  payments: () => getDb().collection("payments"),
+  creditTransactions: () => getDb().collection("credit_transactions"),
 };
 
 export function pingDatabase() {
@@ -68,6 +74,17 @@ export async function ensureIndexes() {
   await collections.users().createIndex({ email: 1 }, { unique: true });
   await collections.documents().createIndex({ sessionId: 1 });
   await collections.userDocuments().createIndex({ sessionId: 1 });
+  // Payment indexes
+  await collections.payments().createIndex({ userId: 1, createdAt: -1 });
+  await collections.payments().createIndex({ razorpayOrderId: 1 }, { unique: true, sparse: true });
+  await collections.payments().createIndex({ razorpayPaymentId: 1 }, { unique: true, sparse: true });
+  await collections.payments().createIndex({ razorpaySubscriptionId: 1 }, { sparse: true });
+  // Credit transaction indexes
+  await collections.creditTransactions().createIndex({ userId: 1, createdAt: -1 });
+  await collections.creditTransactions().createIndex({ referenceId: 1 }, { sparse: true });
+  // User subscription/customer indexes
+  await collections.users().createIndex({ "subscription.razorpayCustomerId": 1 }, { unique: true, sparse: true });
+  await collections.users().createIndex({ "subscription.razorpaySubscriptionId": 1 }, { unique: true, sparse: true });
   logger.info("MongoDB indexes ensured");
 }
 
