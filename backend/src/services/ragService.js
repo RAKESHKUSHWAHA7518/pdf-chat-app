@@ -82,6 +82,7 @@ function buildRAGChain(vectorStore) {
 Use ONLY the following context from the document to answer the question.
 If the answer is not in the context, say "I couldn't find that information in the document."
 Be concise, accurate, and friendly.
+Whenever you provide information from the document, always include citations using the format [Page X] (e.g. [Page 1], [Page 2]) indicating the page where that information was found.
 
 Context from document:
 {context}`,
@@ -91,7 +92,12 @@ Context from document:
   ]);
 
   const formatDocs = (docs) =>
-    docs.map((doc, i) => `[Section ${i + 1}]:\n${doc.pageContent}`).join("\n\n");
+    docs
+      .map((doc, i) => {
+        const page = doc.metadata?.loc?.pageNumber || doc.metadata?.page || (i + 1);
+        return `[Page ${page} - Section ${i + 1}]:\n${doc.pageContent}`;
+      })
+      .join("\n\n");
 
   return RunnableSequence.from([
     {

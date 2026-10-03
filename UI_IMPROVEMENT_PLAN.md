@@ -1,771 +1,461 @@
-# PDF Chat App — Production-Grade UI Improvement Plan
+# PDF Chat App — Production-Grade UI & Pure CSS Motion Architecture Plan
 
-## Current State Analysis
+## Executive Summary: Why Pure Modern CSS (Zero GSAP)
 
-### Existing Structure
-- **Single-page application** with sidebar + chat area layout
-- **Dark theme** with indigo/purple accent colors
-- **Components**: AuthModal, PricingPage, PaymentModal, CreditBalance
-- **No landing page** — users drop directly into chat interface
-- **No onboarding/educational pages** — feature overview missing
-- **Basic CSS animations** only (spinner, pulse, bounce, slideIn, modalIn)
-- **No GSAP** or advanced animation library
+We have completely removed **GSAP** and its companion libraries from this project. 
 
-### Pain Points
-1. **No landing page** for marketing/SEO/conversion
-2. **No authentication pages** (separate login/signup pages)
-3. **No onboarding flow** for new users
-4. **Limited micro-interactions** — feels static
-5. **No page transitions** — jarring navigation
-6. **Missing trust signals** (testimonials, features, stats)
-7. **No documentation/help page**
-8. **No settings/preferences page**
+> [!NOTE]
+> ### Why Removing GSAP Makes the UI Rock-Solid
+> 1. **Zero Runtime Crashes:** Eliminates `Missing plugin? gsap.registerPlugin()`, bundle mismatch, and tree-shaking failures forever.
+> 2. **100% React 19 & StrictMode Immune:** No double-mount glitches, no elements permanently stuck at `opacity: 0`, and no DOM mutation conflicts.
+> 3. **Compositor-Thread Performance (60–120 FPS):** Pure CSS animations and transitions run directly on the browser's GPU compositor thread. They will **never jank**, even while the main JavaScript thread is busy parsing 50MB PDFs or streaming LLM tokens.
+> 4. **Zero Dependency Bloat:** Saves ~70KB+ of JavaScript bundle size, speeding up initial page load (FCP and LCP).
+> 5. **Native Web Standards:** Uses modern CSS features: CSS variables, `@keyframes`, backdrop filters, CSS Grid transitions, and the native browser `IntersectionObserver` API.
 
 ---
 
 ## Target Architecture
 
-### Page Structure (React Router v7)
+### Route Hierarchy (React Router)
 
 ```
-/                           → Landing Page (marketing)
-/login                      → Login Page
-/signup                     → Signup Page
-/app                        → Main App (current chat interface)
-/app/documents              → Document Library (sidebar section → full page)
-/app/settings               → User Settings
-/pricing                    → Pricing Page (full page, not modal)
-/docs                       → Documentation/Help
+/                           → Landing Page (Hero, Features, How It Works, Testimonials, Pricing Teaser)
+/login                      → Login Page (Centered split glass card)
+/signup                     → Signup Page (With password strength & instant toggle)
+/pricing                    → Standalone Pricing Page (Monthly/Yearly toggle, feature comparison, FAQ)
+/docs                       → Documentation & Help Center
 /privacy                    → Privacy Policy
 /terms                      → Terms of Service
+/app                        → Main App Shell (Protected Route)
+  ├── /app                  → Active PDF Chat Interface
+  ├── /app/documents        → Document Library (Grid/List with CSS transitions)
+  └── /app/settings         → User Profile, Billing & Preferences
 ```
 
 ---
 
-## Phase 1: Foundation & Tooling
+## Phase 1: Tooling, Clean Dependencies & Design System
 
-### 1.1 Install Dependencies
-```bash
-npm install react-router-dom gsap @gsap/react
-npm install -D @types/react-router-dom
+### 1.1 Clean `frontend/package.json`
+
+Zero animation dependencies. Only React, React Router, Markdown, and lightweight icons:
+
+```json
+{
+  "dependencies": {
+    "react": "^19.2.5",
+    "react-dom": "^19.2.5",
+    "react-router-dom": "^7.1.0",
+    "react-markdown": "^10.1.0",
+    "lucide-react": "^0.475.0",
+    "clsx": "^2.1.1",
+    "tailwind-merge": "^3.0.1"
+  }
+}
 ```
 
-### 1.2 Configure React Router
-- Wrap App with `<BrowserRouter>`
-- Define routes with lazy-loaded pages for code splitting
-- Add route guards for protected routes (`/app/*`)
+### 1.2 Design Tokens (`src/styles/tokens.css`)
 
-### 1.3 GSAP Setup
-```javascript
-// src/animations/gsap.js
-import { gsap } from "gsap";
-import { ScrollTrigger } from "gsap/ScrollTrigger";
-
-gsap.registerPlugin(ScrollTrigger);
-
-export default gsap;
-```
-
-### 1.4 Design Tokens (CSS Variables)
 ```css
-/* src/styles/tokens.css */
 :root {
-  /* Colors */
+  /* Surfaces */
   --bg-primary: #0a0a0f;
   --bg-secondary: #11111a;
-  --bg-tertiary: #1a1a24;
-  --bg-card: #1e1e2e;
-  --border-primary: #2d2d3a;
+  --bg-tertiary: #181826;
+  --bg-card: rgba(24, 24, 38, 0.75);
+  --bg-glass: rgba(18, 18, 28, 0.65);
+  --bg-card-hover: rgba(30, 30, 48, 0.85);
+
+  /* Borders & Dividers */
+  --border-subtle: rgba(255, 255, 255, 0.08);
+  --border-hover: rgba(99, 102, 241, 0.4);
   --border-focus: #6366f1;
-  
-  --text-primary: #f1f5f9;
+
+  /* Typography */
+  --text-primary: #f8fafc;
   --text-secondary: #94a3b8;
   --text-muted: #64748b;
-  --text-inverse: #0f0f13;
-  
+
+  /* Gradients & Accents */
   --accent-primary: #6366f1;
   --accent-secondary: #8b5cf6;
-  --accent-tertiary: #0ea5e9;
-  --accent-gradient: linear-gradient(135deg, #6366f1, #8b5cf6);
-  --accent-gradient-alt: linear-gradient(135deg, #0ea5e9, #6366f1);
-  
-  --success: #4ade80;
-  --success-bg: #052e16;
-  --error: #fca5a5;
-  --error-bg: #7f1d1d;
-  --warning: #fbbf24;
-  
-  /* Spacing */
-  --space-xs: 4px;
-  --space-sm: 8px;
-  --space-md: 16px;
-  --space-lg: 24px;
-  --space-xl: 32px;
-  --space-2xl: 48px;
-  --space-3xl: 64px;
-  
-  /* Border Radius */
-  --radius-sm: 6px;
-  --radius-md: 10px;
-  --radius-lg: 16px;
-  --radius-xl: 24px;
-  --radius-full: 9999px;
-  
-  /* Shadows */
-  --shadow-sm: 0 1px 2px rgba(0,0,0,0.3);
-  --shadow-md: 0 4px 12px rgba(0,0,0,0.35);
-  --shadow-lg: 0 12px 32px rgba(0,0,0,0.4);
-  --shadow-glow: 0 0 24px rgba(99, 102, 241, 0.3);
-  
+  --accent-tertiary: #06b6d4;
+  --accent-gradient: linear-gradient(135deg, #6366f1 0%, #8b5cf6 50%, #d946ef 100%);
+  --accent-gradient-subtle: linear-gradient(135deg, rgba(99, 102, 241, 0.12), rgba(139, 92, 246, 0.04));
+
+  /* Elevation & Glows */
+  --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.4);
+  --shadow-lg: 0 16px 40px rgba(0, 0, 0, 0.6);
+  --glow-primary: 0 0 35px rgba(99, 102, 241, 0.25);
+  --glow-accent: 0 0 45px rgba(139, 92, 246, 0.3);
+
   /* Transitions */
+  --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+  --ease-smooth: cubic-bezier(0.16, 1, 0.3, 1);
   --duration-fast: 150ms;
   --duration-normal: 250ms;
   --duration-slow: 400ms;
-  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
-  --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
-  
-  /* Typography */
-  --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-  --font-mono: 'JetBrains Mono', 'Fira Code', monospace;
-  
-  --text-xs: 11px;
-  --text-sm: 13px;
-  --text-base: 14px;
-  --text-lg: 16px;
-  --text-xl: 20px;
-  --text-2xl: 28px;
-  --text-3xl: 36px;
-  --text-4xl: 48px;
-  
-  /* Z-index */
-  --z-dropdown: 100;
-  --z-sticky: 200;
-  --z-modal: 300;
-  --z-toast: 400;
-  --z-tooltip: 500;
+
+  /* Radii */
+  --radius-sm: 8px;
+  --radius-md: 14px;
+  --radius-lg: 20px;
+  --radius-full: 9999px;
+}
+```
+
+### 1.3 Pure CSS Animation Engine (`src/styles/animations.css`)
+
+High-performance, hardware-accelerated keyframe animations:
+
+```css
+/* Entrances */
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(24px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes fadeInDown {
+  from {
+    opacity: 0;
+    transform: translateY(-20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes scaleIn {
+  from {
+    opacity: 0;
+    transform: scale(0.94);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+/* Ambient & Motion */
+@keyframes floatSlow {
+  0%, 100% {
+    transform: translateY(0px) rotate(0deg);
+  }
+  50% {
+    transform: translateY(-12px) rotate(1deg);
+  }
+}
+
+@keyframes pulseGlow {
+  0%, 100% {
+    opacity: 0.4;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.75;
+    transform: scale(1.08);
+  }
+}
+
+@keyframes shimmer {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+@keyframes shakeError {
+  0%, 100% { transform: translateX(0); }
+  20%, 60% { transform: translateX(-6px); }
+  40%, 80% { transform: translateX(6px); }
+}
+
+/* Utility Animation Classes */
+.animate-fade-in-up {
+  animation: fadeInUp var(--duration-slow) var(--ease-smooth) forwards;
+}
+
+.animate-scale-in {
+  animation: scaleIn var(--duration-normal) var(--ease-spring) forwards;
+}
+
+.animate-float {
+  animation: floatSlow 6s ease-in-out infinite;
+}
+
+.animate-pulse-glow {
+  animation: pulseGlow 8s ease-in-out infinite;
+}
+
+.animate-shake {
+  animation: shakeError 0.35s ease-in-out;
+}
+
+/* Stagger Utilities */
+.stagger-1 { animation-delay: 60ms; }
+.stagger-2 { animation-delay: 120ms; }
+.stagger-3 { animation-delay: 180ms; }
+.stagger-4 { animation-delay: 240ms; }
+.stagger-5 { animation-delay: 300ms; }
+.stagger-6 { animation-delay: 360ms; }
+```
+
+---
+
+## Phase 2: Modern CSS Interactive Motion System
+
+No external animation engine is needed for modern, tactile UI. We achieve smooth, responsive motion using **CSS variables** and **native web APIs**.
+
+### 2.1 Interactive 3D Spotlight Card (`InteractiveCard.jsx`)
+
+Updates CSS variables `--mouse-x` and `--mouse-y` on hover for a dynamic spotlight beam, combined with pure CSS 3D lift:
+
+```jsx
+// src/components/ui/InteractiveCard.jsx
+import { useRef } from "react";
+
+export function InteractiveCard({ children, className = "" }) {
+  const cardRef = useRef(null);
+
+  const handleMouseMove = (e) => {
+    if (!cardRef.current) return;
+    const rect = cardRef.current.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
+    cardRef.current.style.setProperty("--mouse-x", `${x}px`);
+    cardRef.current.style.setProperty("--mouse-y", `${y}px`);
+  };
+
+  return (
+    <div
+      ref={cardRef}
+      onMouseMove={handleMouseMove}
+      className={`group relative overflow-hidden rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-card)] p-6 backdrop-blur-xl transition-all duration-300 hover:-translate-y-1.5 hover:border-[var(--border-hover)] hover:shadow-2xl hover:shadow-indigo-500/10 ${className}`}
+    >
+      {/* Radial Spotlight Beam */}
+      <div
+        className="pointer-events-none absolute -inset-px rounded-2xl opacity-0 transition-opacity duration-300 group-hover:opacity-100"
+        style={{
+          background: `radial-gradient(600px circle at var(--mouse-x, 0px) var(--mouse-y, 0px), rgba(99, 102, 241, 0.15), transparent 40%)`,
+        }}
+      />
+      <div className="relative z-10">{children}</div>
+    </div>
+  );
+}
+```
+
+### 2.2 Native Intersection Observer Hook (`useInView.js`)
+
+Zero dependencies. Automatically triggers CSS transitions when elements scroll into view:
+
+```javascript
+// src/hooks/useInView.js
+import { useState, useEffect, useRef } from "react";
+
+export function useInView(options = { threshold: 0.15, once: true }) {
+  const ref = useRef(null);
+  const [isInView, setIsInView] = useState(false);
+
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+
+    const observer = new IntersectionObserver(([entry]) => {
+      if (entry.isIntersecting) {
+        setIsInView(true);
+        if (options.once) observer.unobserve(el);
+      } else if (!options.once) {
+        setIsInView(false);
+      }
+    }, options);
+
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [options.threshold, options.once]);
+
+  return [ref, isInView];
+}
+```
+
+### 2.3 Ambient Background Mesh (`AmbientBackground.jsx`)
+
+GPU-composited undulating gradient blooms running on pure CSS `@keyframes`:
+
+```jsx
+// src/components/layout/AmbientBackground.jsx
+export function AmbientBackground() {
+  return (
+    <div className="pointer-events-none fixed inset-0 -z-10 overflow-hidden">
+      {/* Blob 1 */}
+      <div className="animate-pulse-glow absolute -top-40 -left-40 h-[500px] w-[500px] rounded-full bg-indigo-600/15 blur-[120px]" />
+      {/* Blob 2 */}
+      <div className="animate-pulse-glow absolute top-1/3 -right-40 h-[600px] w-[600px] rounded-full bg-purple-600/15 blur-[140px] [animation-delay:3s]" />
+      {/* Blob 3 */}
+      <div className="animate-pulse-glow absolute -bottom-40 left-1/4 h-[550px] w-[550px] rounded-full bg-cyan-600/10 blur-[130px] [animation-delay:6s]" />
+
+      {/* Grid Pattern Overlay */}
+      <div className="absolute inset-0 bg-[linear-gradient(to_right,#ffffff04_1px,transparent_1px),linear-gradient(to_bottom,#ffffff04_1px,transparent_1px)] bg-[size:4rem_4rem] [mask-image:radial-gradient(ellipse_60%_50%_at_50%_0%,#000_70%,transparent_100%)]" />
+    </div>
+  );
 }
 ```
 
 ---
 
-## Phase 2: Landing Page (`/`)
+## Phase 3: Landing Page (`/`)
 
-### 2.1 Page Sections
+### 3.1 Hero Section
+- **Headline & Badge:** Loaded with staggered CSS animation classes (`animate-fade-in-up stagger-1`, `stagger-2`, etc.).
+- **Live Document Mockup:** Wrapped in `animate-float` with interactive hover scale.
+- **CTA Buttons:** Radiant gradient with hover brightness and active scale press (`active:scale-95`).
 
+### 3.2 Features Grid with Native Scroll Reveal
+- Six features rendered inside `<InteractiveCard />`.
+- Wrapped in `useInView` to add `.opacity-100 .translate-y-0` classes when scrolled into the viewport.
+
+### 3.3 How It Works (Step Flow)
+- 3-step visual cards with numbered glowing badges.
+- Connecting lines illuminated via CSS gradients (`bg-gradient-to-r from-indigo-500 to-purple-500`).
+
+### 3.4 Testimonials & Pricing Teaser
+- Testimonial cards with avatar + role badge + star rating.
+- Pricing teaser comparing Free vs. Pro vs. Team with glowing "Most Popular" ribbon.
+
+---
+
+## Phase 4: Auth Pages (`/login`, `/signup`)
+
+### 4.1 Structure
+- Centered dual-column glass card on desktop (`max-w-4xl`).
+- Left column: Dynamic feature highlights and animated document preview.
+- Right column: Clean form with floating label inputs and social login options.
+
+### 4.2 Error Handling & Form Polish
+- Invalid credentials trigger `.animate-shake` on the input or card.
+- Password strength indicator bar transitioning width smoothly (`transition: width 0.3s ease`).
+
+---
+
+## Phase 5: Main App & AI Chat Experience (`/app`)
+
+### 5.1 Real-Time LLM Streaming
+- Token stream rendered via `react-markdown` in real time.
+- Active streaming block displays a pulsing CSS caret:
+```jsx
+{isStreaming && (
+  <span className="inline-block w-2 h-4 ml-1 bg-indigo-400 rounded-sm animate-pulse align-middle" />
+)}
 ```
-Hero Section
-├── Animated background (particles/grid)
-├── Headline + subheadline
-├── CTA buttons (Get Started Free, Watch Demo)
-├── Trust badges (users count, documents processed)
-└── Hero illustration (animated PDF → chat)
 
-Features Section
-├── 6 feature cards with hover animations
-├── Staggered entrance animation
-└── Icons with micro-interactions
-
-How It Works
-├── 3-step visual flow
-├── Animated connectors between steps
-└── Interactive demo preview
-
-Testimonials/Social Proof
-├── Carousel with auto-play
-├── Avatar + quote + company
-└── Swipe/touch support
-
-Pricing Teaser
-├── 3 tier cards
-├── Popular badge animation
-└── CTA to full pricing page
-
-Footer
-├── Links, social, copyright
-└── Newsletter signup
+### 5.2 Message Bubbles
+- User and Assistant messages enter with a quick, subtle 150ms GPU fade:
+```css
+.message-bubble {
+  animation: fadeInUp 0.2s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
 ```
 
-### 2.2 GSAP Animations for Landing
+### 5.3 Collapsible Sidebar Without Layout Reflow
+- Transition sidebar width using CSS transitions with `will-change: width` or CSS Grid template columns (`grid-template-columns: 280px 1fr` to `72px 1fr`).
+- Mobile: Off-canvas drawer sliding from `-100%` to `0` with `transform: translateX()`.
 
-```javascript
-// src/animations/landing.js
-export const heroTimeline = () => {
-  const tl = gsap.timeline({ defaults: { ease: "power3.out" } });
-  
-  tl.from(".hero-badge", { y: 30, opacity: 0, duration: 0.8 })
-    .from(".hero-title span", { y: 50, opacity: 0, duration: 0.8, stagger: 0.1 }, "-=0.4")
-    .from(".hero-subtitle", { y: 30, opacity: 0, duration: 0.6 }, "-=0.3")
-    .from(".hero-cta-group", { y: 30, opacity: 0, duration: 0.6, stagger: 0.1 }, "-=0.2")
-    .from(".hero-stats", { y: 30, opacity: 0, duration: 0.6 }, "-=0.2")
-    .from(".hero-illustration", { scale: 0.9, opacity: 0, duration: 1, ease: "elastic.out(1, 0.5)" }, "-=0.6");
-    
-  return tl;
-};
+---
 
-export const featureCardsAnimation = () => {
-  gsap.utils.toArray(".feature-card").forEach((card, i) => {
-    gsap.from(card, {
-      scrollTrigger: {
-        trigger: card,
-        start: "top 85%",
-        toggleActions: "play none none reverse"
-      },
-      y: 60,
-      opacity: 0,
-      duration: 0.8,
-      delay: i * 0.1,
-      ease: "power3.out"
-    });
-    
-    // Hover animation
-    card.addEventListener("mouseenter", () => {
-      gsap.to(card, { y: -8, boxShadow: "var(--shadow-lg)", duration: 0.3 });
-      gsap.to(card.querySelector(".feature-icon"), { scale: 1.1, rotation: 5, duration: 0.3 });
-    });
-    card.addEventListener("mouseleave", () => {
-      gsap.to(card, { y: 0, boxShadow: "var(--shadow-md)", duration: 0.3 });
-      gsap.to(card.querySelector(".feature-icon"), { scale: 1, rotation: 0, duration: 0.3 });
-    });
-  });
-};
+## Phase 6: Document Library, Settings & Standalone Pricing
 
-export const counterAnimation = (elements) => {
-  elements.forEach(el => {
-    const target = parseInt(el.dataset.count);
-    gsap.to({ val: 0 }, {
-      val: target,
-      duration: 2,
-      ease: "power2.out",
-      scrollTrigger: { trigger: el, start: "top 80%" },
-      onUpdate: function() { el.textContent = Math.round(this.targets()[0].val).toLocaleString(); }
-    });
-  });
-};
+### 6.1 Document Library (`/app/documents`)
+- **Grid / List Toggle:** Styled via CSS Grid and Flexbox with smooth transition classes (`transition-all duration-300`).
+- **File Upload Dropzone:** Drag-and-drop zone with animated pulsing border on file drag-over.
+
+### 6.2 Standalone Pricing Page (`/pricing`)
+- **Billing Toggle (Monthly/Yearly):** Sliding indicator using pure CSS transform (`translate-x-0` to `translate-x-full`).
+- **Feature Comparison Table:** Responsive table with tooltips and checkmark icons.
+- **FAQ Accordion:** Pure CSS grid transition for smooth auto-height expansion:
+```css
+.faq-content {
+  display: grid;
+  grid-template-rows: 0fr;
+  transition: grid-template-rows 0.25s ease-out;
+}
+.faq-content.open {
+  grid-template-rows: 1fr;
+}
 ```
 
 ---
 
-## Phase 3: Auth Pages (`/login`, `/signup`)
+## Phase 7: Accessibility & Mobile Optimization
 
-### 3.1 Design Requirements
-- **Full-page centered card** with animated background
-- **Split layout** on desktop (illustration + form)
-- **Smooth transitions** between login/signup
-- **Password strength indicator** (signup)
-- **Social login buttons** (Google, GitHub) — placeholder for future
-- **Forgot password flow**
+### 7.1 Strict `prefers-reduced-motion` Support
+A single global CSS block ensures 100% compliance with OS accessibility preferences:
 
-### 3.2 GSAP Animations
-
-```javascript
-// src/animations/auth.js
-export const authPageEnter = (container) => {
-  const tl = gsap.timeline();
-  
-  tl.from(".auth-bg-shape", { 
-    scale: 0, 
-    opacity: 0, 
-    duration: 1, 
-    stagger: 0.2, 
-    ease: "elastic.out(1, 0.5)" 
-  })
-  .from(".auth-card", { 
-    y: 50, 
-    opacity: 0, 
-    duration: 0.8, 
-    ease: "power3.out" 
-  }, "-=0.5")
-  .from(".auth-card .form-group", { 
-    y: 20, 
-    opacity: 0, 
-    duration: 0.5, 
-    stagger: 0.08, 
-    ease: "power2.out" 
-  }, "-=0.3");
-};
-
-export const authModeSwitch = (direction = "forward") => {
-  const tl = gsap.timeline();
-  const sign = direction === "forward" ? 1 : -1;
-  
-  tl.to(".auth-form", { 
-    x: -30 * sign, 
-    opacity: 0, 
-    duration: 0.3, 
-    ease: "power2.in" 
-  })
-  .set(".auth-form", { display: "none" })
-  .set(".auth-form", { display: "block" }, "+=0.01")
-  .from(".auth-form", { 
-    x: 30 * sign, 
-    opacity: 0, 
-    duration: 0.4, 
-    ease: "power2.out" 
-  });
-  
-  return tl;
-};
-```
-
----
-
-## Phase 4: Main App Enhancement (`/app`)
-
-### 4.1 Layout Improvements
-- **Responsive sidebar** — collapsible on mobile, off-canvas drawer
-- **Top bar** with breadcrumbs, search, notifications
-- **Command palette** (Cmd+K) for quick actions
-- **Keyboard shortcuts** help modal
-
-### 4.2 Chat Area Animations
-
-```javascript
-// src/animations/chat.js
-export const messageEnter = (element, isUser) => {
-  gsap.from(element, {
-    y: isUser ? 30 : -30,
-    opacity: 0,
-    duration: 0.5,
-    ease: "power3.out",
-    clearProps: "transform,opacity"
-  });
-};
-
-export const typingIndicator = (dots) => {
-  gsap.to(dots, {
-    y: -8,
-    duration: 0.4,
-    stagger: 0.15,
-    yoyo: true,
-    repeat: -1,
-    ease: "power1.inOut"
-  });
-};
-
-export const streamingText = (element, text, onComplete) => {
-  // Typewriter effect with GSAP
-  const tl = gsap.timeline({ onComplete });
-  tl.fromTo(element, 
-    { text: "" }, 
-    { 
-      duration: text.length * 0.015, 
-      ease: "none",
-      text: { value: text, delimiter: "" }
-    }
-  );
-  return tl;
-};
-
-export const sidebarCollapse = (sidebar, isCollapsed) => {
-  gsap.to(sidebar, {
-    width: isCollapsed ? 72 : 300,
-    duration: 0.4,
-    ease: "power3.inOut"
-  });
-  
-  gsap.to(sidebar.querySelectorAll(".sidebar-label"), {
-    opacity: isCollapsed ? 0 : 1,
-    duration: 0.2,
-    stagger: isCollapsed ? -0.02 : 0.02
-  });
-};
-```
-
-### 4.3 Micro-interactions
-- **Button press**: scale(0.96) + ripple effect
-- **Input focus**: border glow + label float
-- **Drag-over upload**: border pulse + background shift
-- **Message hover**: subtle lift + action buttons fade in
-- **Scroll indicator**: appears when not at bottom
-
----
-
-## Phase 5: Document Library Page (`/app/documents`)
-
-### 5.1 Features
-- **Grid/List view toggle** with smooth transition
-- **Search/filter/sort** with debounced input
-- **Bulk actions** (select multiple → delete/archive)
-- **Document preview** on hover/click
-- **Upload zone** with progress
-- **Empty state** with illustration + CTA
-
-### 5.2 Animations
-```javascript
-export const documentGridEnter = (items) => {
-  gsap.from(items, {
-    y: 40,
-    opacity: 0,
-    duration: 0.5,
-    stagger: 0.06,
-    ease: "power3.out",
-    scrollTrigger: { trigger: ".documents-grid", start: "top 80%" }
-  });
-};
-
-export const viewToggle = (fromView, toView) => {
-  // FLIP animation for grid ↔ list transition
-  const state = Flip.getState(".document-card");
-  // ... DOM update ...
-  Flip.from(state, { duration: 0.5, ease: "power2.inOut", stagger: 0.03 });
-};
-```
-
----
-
-## Phase 6: Settings Page (`/app/settings`)
-
-### 6.1 Sections
-- **Profile** (avatar, name, email)
-- **API Keys** (for developers)
-- **Preferences** (theme, language, notifications)
-- **Billing** (current plan, usage, invoices)
-- **Data** (export, delete account)
-- **Danger Zone** (delete account)
-
-### 6.2 Animations
-- Section expand/collapse with accordion
-- Form validation shake on error
-- Save success toast with checkmark animation
-
----
-
-## Phase 7: Pricing Page (`/pricing`)
-
-### 7.1 Enhanced from Current Modal
-- **Full page** with hero section
-- **Monthly/Yearly toggle** with sliding animation
-- **Feature comparison table** with checkmarks
-- **FAQ accordion** at bottom
-- **Money-back guarantee** badge
-
-### 7.2 Animations
-```javascript
-export const pricingToggle = (monthlyCards, yearlyCards) => {
-  const tl = gsap.timeline();
-  
-  tl.to(monthlyCards, { 
-    x: -50, opacity: 0, scale: 0.95, duration: 0.3, stagger: 0.03, ease: "power2.in" 
-  })
-  .set(monthlyCards, { display: "none" })
-  .set(yearlyCards, { display: "grid" })
-  .from(yearlyCards, { 
-    x: 50, opacity: 0, scale: 0.95, duration: 0.4, stagger: 0.03, ease: "power2.out" 
-  });
-};
-```
-
----
-
-## Phase 8: Documentation Page (`/docs`)
-
-### 8.1 Structure
-- **Sidebar navigation** (nested categories)
-- **Main content** with syntax highlighting
-- **Search** (Algolia DocSearch or local)
-- **Table of contents** auto-generated
-- **Code copy button** with feedback
-- **Dark/light theme toggle**
-
----
-
-## Phase 9: Global Animation System
-
-### 9.1 Page Transitions
-```javascript
-// src/animations/pageTransitions.js
-export const pageTransition = {
-  enter: (node) => {
-    gsap.from(node, {
-      opacity: 0,
-      y: 20,
-      duration: 0.4,
-      ease: "power2.out",
-      clearProps: "all"
-    });
-  },
-  exit: (node) => {
-    return gsap.to(node, {
-      opacity: 0,
-      y: -20,
-      duration: 0.3,
-      ease: "power2.in"
-    });
+```css
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
   }
-};
+}
 ```
 
-### 9.2 Reusable Components
-
-```javascript
-// src/components/animated/AnimatedCard.jsx
-// src/components/animated/AnimatedButton.jsx
-// src/components/animated/AnimatedInput.jsx
-// src/components/animated/AnimatedModal.jsx
-// src/components/animated/StaggeredList.jsx
-// src/components/animated/ParallaxBackground.jsx
-```
-
-### 9.3 Scroll Animations
-- **Fade up** on scroll into view
-- **Parallax** for hero backgrounds
-- **Pin** for sticky sidebars
-- **Horizontal scroll** for feature showcases
+### 7.2 Mobile Touch Optimizations
+- Hover lifts and spotlights are automatically disabled on touch devices via `@media (hover: hover)`.
+- Fluid typography using CSS `clamp()` (`clamp(1.75rem, 4vw, 3rem)`).
 
 ---
 
-## Phase 10: Accessibility & Performance
+## 4-Week Implementation Roadmap
 
-### 10.1 Accessibility
-- `prefers-reduced-motion` — disable all animations
-- Focus traps in modals
-- ARIA labels on all interactive elements
-- Semantic HTML structure
-- Color contrast ratios (WCAG AA)
+```
+Week 1: Clean Foundation & Layouts
+├── 1.1 Remove unused animation libraries from frontend/package.json
+├── 1.2 Implement tokens.css & animations.css design engine
+├── 1.3 Build PublicLayout (Header, Footer, AmbientBackground) and AppLayout
+└── 1.4 Setup React Router (routes/index.jsx) with Protected Route loader
 
-### 10.2 Performance
-- **Code splitting** per route
-- **Lazy load** heavy components (charts, editors)
-- **GSAP ScrollTrigger** — `once: true` for one-time animations
-- **will-change** only during animation
-- **IntersectionObserver** for non-GSAP triggers
+Week 2: Landing Page & Public Presence
+├── 2.1 Build InteractiveCard (spotlight beam + hover lift)
+├── 2.2 Implement Hero section with animated document preview & stats
+├── 2.3 Build Features section with useInView scroll reveals
+├── 2.4 Implement How It Works step flow with glowing connectors
+└── 2.5 Build Testimonials carousel and Pricing teaser
 
-```javascript
-// src/hooks/useReducedMotion.js
-export const useReducedMotion = () => {
-  const [reduceMotion, setReduceMotion] = useState(false);
-  
-  useEffect(() => {
-    const mediaQuery = window.matchMedia("(prefers-reduced-motion: reduce)");
-    setReduceMotion(mediaQuery.matches);
-    const handler = (e) => setReduceMotion(e.matches);
-    mediaQuery.addEventListener("change", handler);
-    return () => mediaQuery.removeEventListener("change", handler);
-  }, []);
-  
-  return reduceMotion;
-};
+Week 3: Auth & App Experience
+├── 3.1 Build split glass LoginPage and SignupPage with error shake
+├── 3.2 Wire up chat interface to /app route
+├── 3.3 Add smooth message entrance transitions & streaming caret
+└── 3.4 Polish responsive sidebar (desktop collapse + mobile drawer)
+
+Week 4: Feature Completion & Polish
+├── 4.1 Build Document Library page (Grid/List toggle, search, upload dropzone)
+├── 4.2 Build full Pricing page with monthly/yearly toggle & FAQ accordion
+├── 4.3 Build User Settings page (profile, API keys, dark theme)
+└── 4.4 Run performance audit (Lighthouse: 95+ Performance, 100 A11y)
 ```
 
 ---
 
-## Phase 11: Component Library (Reusable)
+## Verification & Acceptance Checklist
 
-### 11.1 Core Components
-| Component | Variants | Animations |
-|-----------|----------|------------|
-| Button | primary, secondary, ghost, danger, link | press, loading, hover glow |
-| Input | text, textarea, select, file | focus, error shake, label float |
-| Card | default, hover-lift, bordered | entrance, hover |
-| Modal | default, fullscreen, drawer | slide/fade, backdrop blur |
-| Toast | success, error, warning, info | slide in, progress bar out |
-| Tooltip | top, bottom, left, right | fade + slide |
-| Dropdown | menu, select, combobox | scale + fade |
-| Tabs | line, enclosed, soft | indicator slide |
-| Accordion | single, multiple | height animate |
-| Avatar | image, initials, fallback | ring pulse |
-| Badge | default, dot, outline | pulse (for notifications) |
-| Spinner | default, dots, bars | rotate, bounce |
-| Skeleton | text, card, table | shimmer |
-
----
-
-## Implementation Priority
-
-### Week 1: Foundation
-- [ ] React Router setup
-- [ ] Design tokens (CSS variables)
-- [ ] GSAP configuration
-- [ ] Page transition system
-- [ ] Reduced motion support
-
-### Week 2: Landing Page
-- [ ] Hero section with animations
-- [ ] Features section
-- [ ] How it works
-- [ ] Testimonials carousel
-- [ ] Pricing teaser
-- [ ] Footer
-
-### Week 3: Auth Pages
-- [ ] Login page
-- [ ] Signup page
-- [ ] Forgot password
-- [ ] Mode switch animation
-- [ ] Form validation UX
-
-### Week 4: Main App Polish
-- [ ] Responsive sidebar
-- [ ] Message animations
-- [ ] Typing indicator
-- [ ] Streaming text effect
-- [ ] Micro-interactions
-
-### Week 5: Additional Pages
-- [ ] Document Library page
-- [ ] Settings page
-- [ ] Pricing page (full)
-- [ ] Documentation page
-
-### Week 6: Polish & Ship
-- [ ] Accessibility audit
-- [ ] Performance optimization
-- [ ] Cross-browser testing
-- [ ] Mobile testing
-- [ ] Documentation
-
----
-
-## File Structure (Proposed)
-
-```
-frontend/src/
-├── animations/
-│   ├── gsap.js              # GSAP config & plugins
-│   ├── landing.js           # Landing page timelines
-│   ├── auth.js              # Auth page animations
-│   ├── chat.js              # Chat area animations
-│   ├── pageTransitions.js   # Route transitions
-│   └── utils.js             # Helpers (Flip, stagger, etc.)
-├── components/
-│   ├── animated/            # Reusable animated components
-│   │   ├── AnimatedButton.jsx
-│   │   ├── AnimatedCard.jsx
-│   │   ├── AnimatedInput.jsx
-│   │   ├── AnimatedModal.jsx
-│   │   ├── StaggeredList.jsx
-│   │   └── index.js
-│   ├── layout/
-│   │   ├── Header.jsx
-│   │   ├── Sidebar.jsx
-│   │   ├── Footer.jsx
-│   │   └── PageLayout.jsx
-│   ├── landing/
-│   │   ├── Hero.jsx
-│   │   ├── Features.jsx
-│   │   ├── HowItWorks.jsx
-│   │   ├── Testimonials.jsx
-│   │   └── PricingTeaser.jsx
-│   ├── auth/
-│   │   ├── LoginForm.jsx
-│   │   ├── SignupForm.jsx
-│   │   └── AuthLayout.jsx
-│   ├── app/
-│   │   ├── ChatArea.jsx
-│   │   ├── MessageBubble.jsx
-│   │   ├── MessageInput.jsx
-│   │   ├── DocumentSidebar.jsx
-│   │   └── Suggestions.jsx
-│   └── ui/                  # Base UI components
-│       ├── Button.jsx
-│       ├── Input.jsx
-│       ├── Card.jsx
-│       ├── Modal.jsx
-│       ├── Toast.jsx
-│       └── index.js
-├── hooks/
-│   ├── useReducedMotion.js
-│   ├── usePageTransition.js
-│   └── useGSAP.js
-├── pages/
-│   ├── LandingPage.jsx
-│   ├── LoginPage.jsx
-│   ├── SignupPage.jsx
-│   ├── AppPage.jsx          # Main chat interface
-│   ├── DocumentsPage.jsx
-│   ├── SettingsPage.jsx
-│   ├── PricingPage.jsx
-│   ├── DocsPage.jsx
-│   ├── PrivacyPage.jsx
-│   └── TermsPage.jsx
-├── routes/
-│   ├── index.jsx            # Route definitions
-│   └── guards.jsx           # Protected route wrapper
-├── styles/
-│   ├── tokens.css           # Design tokens
-│   ├── globals.css          # Global styles
-│   ├── components.css       # Component styles
-│   └── animations.css       # Keyframe animations
-├── utils/
-│   ├── cn.js                # classNames utility
-│   └── formatters.js
-├── App.jsx                  # Router + providers
-└── main.jsx                 # Entry point
-```
-
----
-
-## GSAP Animation Patterns Reference
-
-### Common Patterns Used
-
-```javascript
-// 1. Staggered entrance
-gsap.from(elements, { y: 30, opacity: 0, duration: 0.6, stagger: 0.08, ease: "power3.out" });
-
-// 2. Scroll-triggered
-gsap.from(element, { 
-  scrollTrigger: { trigger: element, start: "top 80%" },
-  y: 50, opacity: 0, duration: 0.8, ease: "power3.out" 
-});
-
-// 3. Hover micro-interaction
-element.addEventListener("mouseenter", () => gsap.to(element, { y: -4, duration: 0.2 }));
-element.addEventListener("mouseleave", () => gsap.to(element, { y: 0, duration: 0.2 }));
-
-// 4. Click press
-element.addEventListener("mousedown", () => gsap.to(element, { scale: 0.96, duration: 0.1 }));
-element.addEventListener("mouseup", () => gsap.to(element, { scale: 1, duration: 0.1, ease: "back.out(2)" }));
-
-// 5. FLIP for layout changes
-const state = Flip.getState(elements);
-// ... DOM changes ...
-Flip.from(state, { duration: 0.5, ease: "power2.inOut", stagger: 0.05 });
-
-// 6. Text reveal (split by lines/words/chars)
-gsap.from(".text-reveal", { 
-  y: "100%", 
-  duration: 0.8, 
-  stagger: 0.05, 
-  ease: "power3.out" 
-});
-
-// 7. Morphing SVG paths
-gsap.to("#path", { morphSVG: "#targetPath", duration: 1, ease: "power2.inOut" });
-
-// 8. Draggable with bounds
-Draggable.create(".slider", { type: "x", bounds: ".slider-track", inertia: true });
-
-// 9. Timeline for complex sequences
-const tl = gsap.timeline({ defaults: { ease: "power2.out" } });
-tl.to(...).from(...).to(..., "<0.2"); // "<0.2" = overlap 0.2s
-
-// 10. Reduced motion respect
-if (!reduceMotion) { gsap.to(...); } else { gsap.set(...); }
-```
-
----
-
-## Success Metrics
-
-| Metric | Target |
-|--------|--------|
-| Lighthouse Performance | > 90 |
-| Lighthouse Accessibility | 100 |
-| Lighthouse Best Practices | > 95 |
-| First Contentful Paint | < 1.5s |
-| Time to Interactive | < 3s |
-| Cumulative Layout Shift | < 0.1 |
-| Animation frame rate | 60fps (no jank) |
-
----
-
-## Notes for Implementation
-
-1. **Start with design tokens** — single source of truth for colors, spacing, typography
-2. **Build animated components first** — reuse across all pages
-3. **Test reduced motion early** — don't bolt on at the end
-4. **Use GSAP ScrollTrigger sparingly** — prefer IntersectionObserver for simple triggers
-5. **Keep animations purposeful** — guide attention, provide feedback, show relationships
-6. **Profile with DevTools Performance tab** — check for layout thrashing
-7. **Document animation patterns** — maintain consistency across team
+| Metric | Target | Verification Method |
+|---|---|---|
+| **Zero Runtime Errors** | 0 errors in console | Clean browser console across all routes |
+| **Build Stability** | `npm run build` passes | Instant, clean Vite production build |
+| **FPS / Jank** | Consistent 60 FPS | Chrome DevTools Performance Profiler (Compositor-only) |
+| **Page Speed** | Lighthouse > 90 | Zero heavy JS animation libraries in bundle |
+| **Mobile Experience** | Flawless on touch | No broken hover states; responsive drawer |
+| **Accessibility** | 100% WCAG compliant | Full keyboard navigation and reduced-motion support |

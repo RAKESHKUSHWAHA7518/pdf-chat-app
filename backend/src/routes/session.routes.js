@@ -168,14 +168,16 @@ sessionRouter.post("/chat", validate(chatSchema), async (req, res) => {
       }
     }
 
-    if (!res.writableEnded && fullResponse) {
-      // Save to conversation history
-      session.history.push(new HumanMessage(question));
-      session.history.push(new AIMessage(fullResponse));
+    if (!res.writableEnded) {
+      if (fullResponse) {
+        // Save to conversation history
+        session.history.push(new HumanMessage(question));
+        session.history.push(new AIMessage(fullResponse));
 
-      // Keep history bounded to the last N messages
-      if (session.history.length > env.MAX_HISTORY_MESSAGES) {
-        session.history.splice(0, session.history.length - env.MAX_HISTORY_MESSAGES);
+        // Keep history bounded to the last N messages
+        if (session.history.length > env.MAX_HISTORY_MESSAGES) {
+          session.history.splice(0, session.history.length - env.MAX_HISTORY_MESSAGES);
+        }
       }
 
       res.write(`data: ${JSON.stringify({ done: true })}\n\n`);
