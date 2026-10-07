@@ -470,6 +470,7 @@ export function GithubStudio({ initialData = null }) {
     if (projects.length > 0) {
       md += `### 🚀 Featured Projects\n\n`;
       projects.forEach((p) => {
+        if (!p.title?.trim()) return;
         const repoLink = p.link?.trim();
         const liveLink = p.liveUrl?.trim();
         const primaryUrl = liveLink || repoLink || "#";
@@ -479,7 +480,7 @@ export function GithubStudio({ initialData = null }) {
         if (repoLink) links.push(`[💻 GitHub Repo](${repoLink})`);
 
         const linksSuffix = links.length > 0 ? ` &nbsp;•&nbsp; ${links.join(" &nbsp;•&nbsp; ")}` : "";
-        md += `- **[${p.title}](${primaryUrl})** — ${p.desc}${linksSuffix}\n`;
+        md += `- **[${p.title}](${primaryUrl})** — ${p.desc || "Full-stack software application"}${linksSuffix}\n`;
       });
       md += `\n`;
     }
@@ -963,7 +964,7 @@ e.g. 'I am an AI engineer building LLM agents with LangChain, Next.js, and Pytho
           <div className="space-y-3 pt-4 border-t border-slate-800/80">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
               <h2 className="text-xs font-bold uppercase tracking-wider text-indigo-400 flex items-center gap-1.5">
-                <Layers size={13} /> 2. Tech Stack & Badge Layout ({selectedTech.length} selected)
+                <Layers size={13} /> 3. Tech Stack & Badge Layout ({selectedTech.length} selected)
               </h2>
             </div>
 
@@ -1091,7 +1092,7 @@ e.g. 'I am an AI engineer building LLM agents with LangChain, Next.js, and Pytho
           <div className="space-y-3 pt-4 border-t border-slate-800/80">
             <div className="flex items-center justify-between">
               <h2 className="text-xs font-bold uppercase tracking-wider text-indigo-400 flex items-center gap-1.5">
-                <Bot size={13} /> 2.5 About Me & Quick Facts
+                <Bot size={13} /> 4. About Me & Developer Facts
               </h2>
               <label className="flex items-center gap-1.5 text-xs text-slate-400 cursor-pointer">
                 <input
@@ -1155,9 +1156,9 @@ e.g. 'I am an AI engineer building LLM agents with LangChain, Next.js, and Pytho
             )}
           </div>
 
-          {/* Section 3: Social Links */}
+          {/* Section 5: Social Links */}
           <div className="space-y-3 pt-4 border-t border-slate-800/80">
-            <h2 className="text-xs font-bold uppercase tracking-wider text-indigo-400">3. Social Links & Profiles</h2>
+            <h2 className="text-xs font-bold uppercase tracking-wider text-indigo-400">5. Social Links & Profiles</h2>
             <div className="grid sm:grid-cols-2 gap-2.5">
               <div>
                 <label className="text-[10px] text-slate-400 font-semibold block mb-0.5">GitHub Username</label>
@@ -1212,10 +1213,10 @@ e.g. 'I am an AI engineer building LLM agents with LangChain, Next.js, and Pytho
             </div>
           </div>
 
-          {/* Section 4: Featured Projects */}
+          {/* Section 6: Featured Projects */}
           <div className="space-y-3 pt-4 border-t border-slate-800/80">
             <div className="flex items-center justify-between">
-              <h2 className="text-xs font-bold uppercase tracking-wider text-indigo-400">4. Featured Projects</h2>
+              <h2 className="text-xs font-bold uppercase tracking-wider text-indigo-400">6. Featured Projects</h2>
               <button
                 type="button"
                 onClick={() =>
@@ -1311,9 +1312,9 @@ e.g. 'I am an AI engineer building LLM agents with LangChain, Next.js, and Pytho
             ))}
           </div>
 
-          {/* Section 5: GitHub Stats & Themes */}
+          {/* Section 7: GitHub Stats & Themes */}
           <div className="space-y-3 pt-4 border-t border-slate-800/80">
-            <h2 className="text-xs font-bold uppercase tracking-wider text-indigo-400">5. GitHub Analytics Badges</h2>
+            <h2 className="text-xs font-bold uppercase tracking-wider text-indigo-400">7. GitHub Analytics Badges</h2>
             <div className="grid sm:grid-cols-3 gap-3">
               <label className="flex items-center gap-2 text-xs text-slate-300 cursor-pointer">
                 <input
