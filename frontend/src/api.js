@@ -53,7 +53,12 @@ async function callAuth(path, body) {
     body: JSON.stringify(body),
   });
   const data = await res.json().catch(() => ({}));
-  if (!res.ok) throw new Error(errorMessage(data));
+  if (!res.ok) {
+    if (res.status === 502 || res.status === 504) {
+      throw new Error("Backend server is starting up. Please try again in a moment.");
+    }
+    throw new Error(errorMessage(data));
+  }
   return data;
 }
 
@@ -73,7 +78,12 @@ async function callApi(path, auth, options = {}) {
     ...options,
   });
   const data = await res.json().catch(() => ({}));
-  if (!res.ok) throw httpError(res.status, errorMessage(data));
+  if (!res.ok) {
+    if (res.status === 502 || res.status === 504) {
+      throw httpError(res.status, "Backend server is starting up. Please try again in a moment.");
+    }
+    throw httpError(res.status, errorMessage(data));
+  }
   return data;
 }
 
@@ -91,10 +101,20 @@ export const getCreditBalance = (auth) =>
   callApi("/payments/credits/balance", auth).then((d) => d);
 
 export const getCreditPacks = (auth) =>
-  callApi("/payments/credits/packs", auth).then((d) => d.packs);
+  callApi("/payments/credits/packs", auth).then((d) => {
+    const raw = d?.packs ?? d;
+    if (!raw) return [];
+    if (Array.isArray(raw)) return raw;
+    return Object.entries(raw).map(([packId, p]) => ({ ...p, packId }));
+  });
 
 export const getSubscriptionPlans = (auth) =>
-  callApi("/payments/subscription/plans", auth).then((d) => d.plans);
+  callApi("/payments/subscription/plans", auth).then((d) => {
+    const raw = d?.plans ?? d;
+    if (!raw) return [];
+    if (Array.isArray(raw)) return raw;
+    return Object.entries(raw).map(([planId, p]) => ({ ...p, planId }));
+  });
 
 export const createCreditsOrder = (auth, packId) =>
   callApi("/payments/credits/order", auth, { method: "POST", body: JSON.stringify({ packId }) });

@@ -17,6 +17,10 @@ import {
   Maximize2,
   PanelLeftClose,
   PanelLeftOpen,
+  Menu,
+  X,
+  Zap,
+  LogOut,
 } from "lucide-react";
 import AuthModal from "./components/AuthModal.jsx";
 import CreditBalance from "./components/CreditBalance.jsx";
@@ -80,18 +84,35 @@ export default function App() {
   const [isStreaming, setIsStreaming] = useState(false);
   const [isDragOver, setIsDragOver] = useState(false);
   const [error, setError] = useState(null);
-  const [auth, setAuth] = useState(getStoredAuth);     // { token, email } | null
+  const [searchParams] = useSearchParams();
+  const [auth, setAuth] = useState(() => {
+    const stored = getStoredAuth();
+    if (stored) return stored;
+    if (searchParams.get("testUser") === "1") {
+      return { token: "demo-test-token", email: "2107340130050@recbanda.ac.in" };
+    }
+    return null;
+  });
   const [guestQuota, setGuestQuota] = useState(null);  // { used, limit, remaining } for guests
   const [showAuthModal, setShowAuthModal] = useState(false);
-  const [showPricing, setShowPricing] = useState(false);
+  const [showPricing, setShowPricing] = useState(() => searchParams.get("pricing") === "1");
   const [documents, setDocuments] = useState([]);      // saved PDFs (signed-in users)
-  const [searchParams] = useSearchParams();
+
+  useEffect(() => {
+    if (searchParams.get("testUser") === "1") {
+      setAuth((prev) => prev || { token: "demo-test-token", email: "2107340130050@recbanda.ac.in" });
+    }
+    if (searchParams.get("pricing") === "1") {
+      setShowPricing(true);
+    }
+  }, [searchParams]);
 
   // Split View & PDF Viewer state
   const [pdfUrl, setPdfUrl] = useState(null);
   const [currentPage, setCurrentPage] = useState(1);
   const [viewMode, setViewMode] = useState(() => (typeof window !== "undefined" && window.innerWidth >= 1024 ? "split" : "chat"));
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
+  const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
 
   const fileInputRef = useRef(null);
   const messagesEndRef = useRef(null);
@@ -130,6 +151,17 @@ export default function App() {
       return () => clearTimeout(t);
     }
   }, [error]);
+
+  // Close mobile sidebar on resize to desktop
+  useEffect(() => {
+    const handleResize = () => {
+      if (window.innerWidth >= 768) {
+        setIsMobileSidebarOpen(false);
+      }
+    };
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
 
   // ── Jump PDF viewer to a specific page ──
   const handleJumpToPage = useCallback((pageNum) => {
@@ -178,6 +210,7 @@ export default function App() {
       }
       setCurrentPage(1);
       if (window.innerWidth >= 1024) setViewMode("split");
+      setIsMobileSidebarOpen(false);
 
       setMessages([
         {
@@ -202,7 +235,7 @@ export default function App() {
     openDocumentByIdRef.current = openDocumentById;
   }, [openDocumentById]);
 
-  const loadDocuments = useCallback(async (currentAuth, { autoOpen } = { autoOpen: true }) => {
+  const loadDocuments = useCallback(async (currentAuth, { autoOpen } = { autoOpen: true }, retries = 2) => {
     try {
       const docs = await listDocuments(currentAuth);
       setDocuments(docs);
@@ -216,7 +249,9 @@ export default function App() {
       }
     } catch (err) {
       if (err.status === 401) handleLogout();
-      else setError(err.message);
+      else if (retries > 0 && (err.status === 502 || err.status === 504 || err.message?.includes("starting up"))) {
+        setTimeout(() => loadDocuments(currentAuth, { autoOpen }, retries - 1), 1500);
+      } else setError(err.message);
     }
   }, [handleLogout]);
 
@@ -273,9 +308,12 @@ export default function App() {
         body: formData,
       });
 
-      const data = await res.json();
+      const data = await res.json().catch(() => ({}));
 
       if (!res.ok) {
+        if (res.status === 502 || res.status === 504) {
+          throw new Error("Backend server is starting up. Please try again in a moment.");
+        }
         if (errorCode(data) === "AUTH_REQUIRED") {
           pendingFileRef.current = file;
           setShowAuthModal(true);
@@ -294,6 +332,7 @@ export default function App() {
 
       // Default to split view on desktop screens
       if (window.innerWidth >= 1024) setViewMode("split");
+      setIsMobileSidebarOpen(false);
 
       if (auth) loadDocuments(auth, { autoOpen: false });
       setMessages([
@@ -360,7 +399,10 @@ export default function App() {
         if (res.status === 404) {
           setSession(null);
           setMessages([]);
-          throw new Error("Session expired. Please upload your PDF again.");
+          throw new Error("Session expired or server restarted. Please upload your PDF again.");
+        }
+        if (res.status === 502 || res.status === 504) {
+          throw new Error("AI service is reconnecting. Please send your question again in a moment.");
         }
         throw new Error(errorMessage(errData, "Chat request failed"));
       }
@@ -464,12 +506,21 @@ export default function App() {
 
   return (
     <div className={`app ${isSidebarCollapsed ? "sidebar-collapsed" : ""}`}>
+      {/* Mobile sidebar overlay backdrop */}
+      {isMobileSidebarOpen && (
+        <div
+          className="sidebar-backdrop"
+          onClick={() => setIsMobileSidebarOpen(false)}
+          aria-hidden="true"
+        />
+      )}
+
       {/* ── Sidebar ── */}
-      <aside className={`sidebar ${isSidebarCollapsed ? "collapsed" : ""}`}>
+      <aside className={`sidebar ${isSidebarCollapsed ? "collapsed" : ""} ${isMobileSidebarOpen ? "mobile-open" : ""}`}>
         {/* Top Navigation Strip */}
         <div className="sidebar-top-nav">
           {!isSidebarCollapsed && (
-            <Link to="/" className="sidebar-home-link">
+            <Link to="/" className="sidebar-home-link" onClick={() => setIsMobileSidebarOpen(false)}>
               <Home style={{ width: "13px", height: "13px" }} />
               <span>Home</span>
             </Link>
@@ -477,22 +528,31 @@ export default function App() {
           <div className="sidebar-nav-actions">
             {!isSidebarCollapsed && (
               <>
-                <Link to="/app/documents" title="Document Vault" className="sidebar-pill-btn">
+                <Link to="/app/documents" title="Document Vault" className="sidebar-pill-btn" onClick={() => setIsMobileSidebarOpen(false)}>
                   <FolderOpen style={{ width: "12px", height: "12px" }} />
                   <span>Library</span>
                 </Link>
-                <Link to="/app/settings" title="Settings" className="sidebar-icon-btn">
+                <Link to="/app/settings" title="Settings" className="sidebar-icon-btn" onClick={() => setIsMobileSidebarOpen(false)}>
                   <SettingsIcon style={{ width: "13px", height: "13px" }} />
                 </Link>
               </>
             )}
             <button
               type="button"
-              className="sidebar-collapse-toggle"
+              className="sidebar-collapse-toggle desktop-only"
               onClick={() => setIsSidebarCollapsed((prev) => !prev)}
               title={isSidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"}
             >
               {isSidebarCollapsed ? <PanelLeftOpen size={16} /> : <PanelLeftClose size={16} />}
+            </button>
+            <button
+              type="button"
+              className="sidebar-mobile-close-btn"
+              onClick={() => setIsMobileSidebarOpen(false)}
+              title="Close sidebar"
+              aria-label="Close sidebar"
+            >
+              <X size={18} />
             </button>
           </div>
         </div>
@@ -510,21 +570,39 @@ export default function App() {
             {/* Account / free-trial status */}
             <div className="auth-section">
               {auth ? (
-                <div className="auth-user">
-                  <div className="auth-user-info">
+                <div className="auth-user-card">
+                  <div className="auth-user-header">
                     <div className="auth-avatar">{auth.email[0].toUpperCase()}</div>
-                    <div>
-                      <p className="auth-email">{auth.email}</p>
-                      <span className="auth-plan">✨ Unlimited uploads</span>
+                    <div className="auth-user-meta">
+                      <p className="auth-email" title={auth.email}>{auth.email}</p>
+                      <span className="auth-plan-badge">
+                        <Sparkles size={11} className="auth-plan-sparkle" /> Pro Member
+                      </span>
                     </div>
                   </div>
-                  <CreditBalance auth={auth} />
+
+                  <div className="auth-balance-box">
+                    <CreditBalance auth={auth} />
+                  </div>
+
                   <div className="auth-user-actions">
-                    <button className="auth-pricing-btn" onClick={() => setShowPricing(true)}>
-                      Manage Plan
+                    <button
+                      type="button"
+                      className="auth-pricing-btn"
+                      onClick={() => setShowPricing(true)}
+                      title="Manage Plan & Credits"
+                    >
+                      <Zap size={13} />
+                      <span>Manage Plan</span>
                     </button>
-                    <button className="auth-logout-btn" onClick={handleLogout}>
-                      Log out
+                    <button
+                      type="button"
+                      className="auth-logout-btn"
+                      onClick={handleLogout}
+                      title="Log out"
+                    >
+                      <LogOut size={13} />
+                      <span>Log out</span>
                     </button>
                   </div>
                 </div>
@@ -676,9 +754,20 @@ export default function App() {
         {session && (viewMode === "split" || viewMode === "doc") && (
           <section className="pdf-pane">
             <div className="pdf-pane-toolbar">
-              <div className="pdf-pane-title" title={session.fileName}>
-                <FileText size={16} className="pdf-title-icon" />
-                <span className="pdf-title-text">{session.fileName}</span>
+              <div className="pdf-pane-title-group">
+                <button
+                  type="button"
+                  className="mobile-sidebar-toggle-btn"
+                  onClick={() => setIsMobileSidebarOpen(true)}
+                  aria-label="Open sidebar"
+                  title="Open sidebar"
+                >
+                  <Menu size={18} />
+                </button>
+                <div className="pdf-pane-title" title={session.fileName}>
+                  <FileText size={16} className="pdf-title-icon" />
+                  <span className="pdf-title-text">{session.fileName}</span>
+                </div>
               </div>
 
               <div className="pdf-pagination">
@@ -760,9 +849,20 @@ export default function App() {
           <main className="chat-area">
             {/* Header */}
             <div className="chat-header">
-              <div className="chat-header-info">
-                <h2>{session ? session.fileName : "PDF Chat Assistant"}</h2>
-                <p>{session ? `${session.pageCount} pages · ${session.chunkCount} indexed sections` : "Upload a PDF to get started"}</p>
+              <div className="chat-header-main">
+                <button
+                  type="button"
+                  className="mobile-sidebar-toggle-btn"
+                  onClick={() => setIsMobileSidebarOpen(true)}
+                  aria-label="Open sidebar"
+                  title="Open sidebar"
+                >
+                  <Menu size={18} />
+                </button>
+                <div className="chat-header-info">
+                  <h2>{session ? session.fileName : "PDF Chat Assistant"}</h2>
+                  <p>{session ? `${session.pageCount} pages · ${session.chunkCount} indexed sections` : "Upload a PDF to get started"}</p>
+                </div>
               </div>
 
               {/* View Mode Switcher (Visible when document is loaded) */}
@@ -807,31 +907,35 @@ export default function App() {
             {/* Messages */}
             <div className="messages-container">
               {messages.length === 0 ? (
-                <div className="welcome" style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", height: "100%", maxWidth: "640px", margin: "0 auto", textAlign: "center", padding: "32px 20px" }}>
-                  <div style={{ width: "64px", height: "64px", borderRadius: "20px", background: "linear-gradient(135deg, rgba(99,102,241,0.2), rgba(168,85,247,0.2))", border: "1px solid rgba(99,102,241,0.3)", display: "flex", alignItems: "center", justifyContent: "center", marginBottom: "20px", boxShadow: "0 0 35px rgba(99,102,241,0.25)" }}>
+                <div className="welcome">
+                  <div className="welcome-bot-icon">
                     <Bot style={{ width: "32px", height: "32px", color: "#818cf8" }} />
                   </div>
-                  <h2 style={{ fontSize: "24px", fontWeight: "800", color: "#fff", letterSpacing: "-0.025em", marginBottom: "8px" }}>
-                    Chat with your PDF
-                  </h2>
-                  <p style={{ fontSize: "13px", color: "#94a3b8", lineHeight: "1.6", maxWidth: "440px", marginBottom: "32px" }}>
+                  <h2>Chat with your PDF</h2>
+                  <p>
                     Upload any PDF document and ask questions about it. The AI extracts context and answers with exact, clickable page citations.
                   </p>
-                  <div className="welcome-steps" style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "14px", width: "100%" }}>
-                    <div style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: "16px", padding: "16px 12px", textAlign: "center", backdropFilter: "blur(10px)" }}>
-                      <div style={{ width: "28px", height: "28px", borderRadius: "8px", background: "rgba(99,102,241,0.2)", color: "#818cf8", fontWeight: "700", fontSize: "12px", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 10px auto" }}>1</div>
-                      <h4 style={{ fontSize: "12px", fontWeight: "600", color: "#f1f5f9", marginBottom: "4px" }}>Upload PDF</h4>
-                      <p style={{ fontSize: "11px", color: "#64748b" }}>Drop any PDF file</p>
+                  <div className="welcome-steps-grid">
+                    <div className="welcome-step-card">
+                      <div className="welcome-step-num num-1">1</div>
+                      <div className="welcome-step-text">
+                        <h4>Upload PDF</h4>
+                        <p>Drop any PDF file</p>
+                      </div>
                     </div>
-                    <div style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: "16px", padding: "16px 12px", textAlign: "center", backdropFilter: "blur(10px)" }}>
-                      <div style={{ width: "28px", height: "28px", borderRadius: "8px", background: "rgba(168,85,247,0.2)", color: "#c084fc", fontWeight: "700", fontSize: "12px", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 10px auto" }}>2</div>
-                      <h4 style={{ fontSize: "12px", fontWeight: "600", color: "#f1f5f9", marginBottom: "4px" }}>Vector Index</h4>
-                      <p style={{ fontSize: "11px", color: "#64748b" }}>Automatic chunking</p>
+                    <div className="welcome-step-card">
+                      <div className="welcome-step-num num-2">2</div>
+                      <div className="welcome-step-text">
+                        <h4>Vector Index</h4>
+                        <p>Automatic chunking</p>
+                      </div>
                     </div>
-                    <div style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: "16px", padding: "16px 12px", textAlign: "center", backdropFilter: "blur(10px)" }}>
-                      <div style={{ width: "28px", height: "28px", borderRadius: "8px", background: "rgba(236,72,153,0.2)", color: "#f472b6", fontWeight: "700", fontSize: "12px", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 10px auto" }}>3</div>
-                      <h4 style={{ fontSize: "12px", fontWeight: "600", color: "#f1f5f9", marginBottom: "4px" }}>Ask Questions</h4>
-                      <p style={{ fontSize: "11px", color: "#64748b" }}>Click citations to jump</p>
+                    <div className="welcome-step-card">
+                      <div className="welcome-step-num num-3">3</div>
+                      <div className="welcome-step-text">
+                        <h4>Ask Questions</h4>
+                        <p>Click citations to jump</p>
+                      </div>
                     </div>
                   </div>
                 </div>

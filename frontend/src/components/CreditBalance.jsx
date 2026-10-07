@@ -10,53 +10,58 @@ export default function CreditBalance({ auth, onRefresh }) {
     if (auth) fetchBalance();
   }, [auth]);
 
-  const fetchBalance = async () => {
+  const fetchBalance = async (retries = 2) => {
     setLoading(true);
     try {
       const data = await getCreditBalance(auth);
       setBalance(data);
     } catch (err) {
-      console.error("Failed to fetch balance:", err);
+      if (retries > 0 && (err.status === 502 || err.status === 504 || err.message?.includes("starting up"))) {
+        setTimeout(() => fetchBalance(retries - 1), 1500);
+        return;
+      }
+      console.warn("Balance fetch:", err?.message || err);
     } finally {
       setLoading(false);
     }
   };
 
-  if (!auth || loading) return null;
+  if (!auth) return null;
+
+  if (loading && !balance) {
+    return (
+      <div className="credit-balance-loading">
+        <span className="balance-pulse-dot" />
+        <span className="balance-loading-text">Loading balance...</span>
+      </div>
+    );
+  }
+
   if (!balance) return null;
 
   const { credits, subscription } = balance;
-  const hasActiveSub = subscription?.status === "active" &&
+  const hasActiveSub =
+    subscription?.status === "active" &&
     subscription?.currentPeriodEnd &&
     new Date(subscription.currentPeriodEnd) > new Date();
 
   return (
-    <div className="credit-balance">
-      <div className="credit-item">
-        <span className="credit-label">Credits</span>
-        <span className="credit-value">{credits}</span>
+    <div className="credit-balance-row">
+      <div className="credit-stat">
+        <span className="credit-stat-icon">⚡</span>
+        <div className="credit-stat-data">
+          <span className="credit-stat-label">Available Credits</span>
+          <span className="credit-stat-count">{credits ?? 0}</span>
+        </div>
       </div>
 
-      <div className="credit-item subscription">
-        <span className="credit-label">
-          {hasActiveSub ? (
-            <>
-              Pro Plan
-              <span className="badge active">Active</span>
-            </>
-          ) : subscription?.status === "cancelled" ? (
-            <>
-              Pro Plan
-              <span className="badge cancelled">Cancelled</span>
-            </>
-          ) : (
-            "Pro Plan"
-          )}
-        </span>
-        {hasActiveSub && subscription.currentPeriodEnd && (
-          <span className="credit-value">
-            Renews {new Date(subscription.currentPeriodEnd).toLocaleDateString()}
-          </span>
+      <div className="plan-status-pill">
+        {hasActiveSub ? (
+          <span className="badge-sub active" title="Active Pro Subscription">Pro Active</span>
+        ) : subscription?.status === "cancelled" ? (
+          <span className="badge-sub cancelled" title="Cancelled subscription">Cancelled</span>
+        ) : (
+          <span className="badge-sub free" title="Free standard tier">Standard</span>
         )}
       </div>
     </div>

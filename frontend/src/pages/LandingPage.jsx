@@ -642,10 +642,10 @@ export function LandingPage() {
               </div>
 
               {/* App Dual Split Canvas */}
-              <div className="grid grid-cols-1 lg:grid-cols-12 gap-3 sm:gap-4 h-[440px] sm:h-[480px]">
+              <div className="grid grid-cols-1 md:grid-cols-12 gap-3 sm:gap-4 h-[440px] sm:h-[480px]">
                 
                 {/* Left Pane: PDF Document Simulation with Highlighting */}
-                <div className="lg:col-span-5 hidden sm:flex flex-col bg-surface-container-lowest/80 rounded-xl p-4 overflow-hidden relative border border-white/5">
+                <div className="md:col-span-5 hidden md:flex flex-col bg-surface-container-lowest/80 rounded-xl p-4 overflow-hidden relative border border-white/5">
                   <div className="flex items-center justify-between text-text-muted font-label-code text-body-sm mb-3 pb-2 bg-surface-container-low/40 rounded px-2">
                     <span>Page 14 / 48</span>
                     <div className="flex items-center gap-2">
@@ -701,7 +701,7 @@ export function LandingPage() {
                 </div>
 
                 {/* Right Pane: Real-Time Chat Workspace */}
-                <div className="lg:col-span-7 flex flex-col justify-between bg-surface-container-lowest/90 rounded-xl p-3 sm:p-5 relative border border-white/5">
+                <div className="col-span-1 md:col-span-7 flex flex-col justify-between bg-surface-container-lowest/90 rounded-xl p-3 sm:p-5 relative border border-white/5">
                   {/* Chat Timeline */}
                   <div className="space-y-4 overflow-y-auto pr-1">
                     
@@ -1083,7 +1083,7 @@ export function LandingPage() {
             </div>
 
             {/* 3 Tier Cards */}
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-stretch mb-10">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-5 lg:gap-8 items-stretch mb-10">
               {/* Starter */}
               <div className="rounded-2xl bg-surface-container/70 backdrop-blur-xl p-8 shadow-[inset_0_1px_1px_rgba(255,255,255,0.06)] flex flex-col justify-between border border-glass-border/40 hover:-translate-y-1 transition-transform">
                 <div>

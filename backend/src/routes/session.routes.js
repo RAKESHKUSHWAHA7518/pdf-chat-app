@@ -10,9 +10,9 @@ import { HumanMessage, AIMessage } from "@langchain/core/messages";
 import { env } from "../config/env.js";
 import { logger } from "../lib/logger.js";
 import { sessionService } from "../services/sessionService.js";
-import { processPdf } from "../services/ragService.js";
+import { processPdf, rebuildRagChain } from "../services/ragService.js";
 import { deleteSessionVectors } from "../lib/vectorStore.js";
-import { saveUserDocument } from "../services/documentService.js";
+import { saveUserDocument, documentHasVectors } from "../services/documentService.js";
 import { hasGuestQuota, recordGuestUpload, getGuestQuota } from "../services/guestService.js";
 import { deductCredit } from "../services/paymentService.js";
 import { validate } from "../middleware/validate.js";
@@ -118,10 +118,27 @@ sessionRouter.post("/upload", uploadLimiter, upload.single("pdf"), async (req, r
 sessionRouter.post("/chat", validate(chatSchema), async (req, res) => {
   const { sessionId, question } = req.body;
 
-  const session = sessionService.get(sessionId);
+  let session = sessionService.get(sessionId);
+  if (!session) {
+    // If the server was restarted or memory cleared, auto-restore session from MongoDB vectors
+    const hasVectors = await documentHasVectors(sessionId).catch(() => false);
+    if (hasVectors) {
+      sessionService.create(sessionId, {
+        ragChain: rebuildRagChain(sessionId),
+        history: [],
+        fileName: "Document",
+        pageCount: 1,
+        chunkCount: 1,
+        userId: req.userId ?? null,
+      });
+      session = sessionService.get(sessionId);
+      logger.info({ sessionId }, "Auto-restored session from MongoDB vectors for chat");
+    }
+  }
+
   if (!session) {
     return res.status(404).json({
-      error: { code: "SESSION_NOT_FOUND", message: "Session not found or expired. Please upload a PDF again." },
+      error: { code: "SESSION_NOT_FOUND", message: "Session not found or expired. Please upload your PDF again." },
     });
   }
 
@@ -132,6 +149,7 @@ sessionRouter.post("/chat", validate(chatSchema), async (req, res) => {
   res.setHeader("Content-Type", "text/event-stream");
   res.setHeader("Cache-Control", "no-cache");
   res.setHeader("Connection", "keep-alive");
+  res.setHeader("X-Accel-Buffering", "no");
   res.flushHeaders();
 
   let fullResponse = "";

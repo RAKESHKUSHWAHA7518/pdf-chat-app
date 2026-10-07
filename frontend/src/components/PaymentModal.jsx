@@ -2,7 +2,7 @@
 import { useEffect, useRef, useState } from "react";
 import { createCreditsOrder, createSubscriptionOrder, verifyPayment } from "../api.js";
 
-export default function PaymentModal({ onClose, onSuccess, type, item, userEmail }) {
+export default function PaymentModal({ auth, onClose, onSuccess, type, item, userEmail }) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [orderData, setOrderData] = useState(null);
@@ -27,8 +27,8 @@ export default function PaymentModal({ onClose, onSuccess, type, item, userEmail
     setError(null);
     try {
       const order = type === "credits"
-        ? await createCreditsOrder(item.packId)
-        : await createSubscriptionOrder(item.planId);
+        ? await createCreditsOrder(auth, item.packId)
+        : await createSubscriptionOrder(auth, item.planId);
       setOrderData(order);
     } catch (err) {
       setError(err.message);
@@ -40,19 +40,21 @@ export default function PaymentModal({ onClose, onSuccess, type, item, userEmail
   const openRazorpayCheckout = () => {
     if (!razorpayLoaded.current || !orderData) return;
 
+    const displayPrice = item.price || (item.amount ? `₹${Math.round(item.amount / 100)}` : "");
+
     const options = {
       key: orderData.key,
       amount: orderData.amount,
       currency: orderData.currency,
       name: "PDF Chat",
-      description: type === "credits" ? `Credit Pack: ${orderData.pack.label}` : `Subscription: ${orderData.plan.label}`,
+      description: type === "credits" ? `Credit Pack: ${orderData.pack?.label || item.label}` : `Subscription: ${orderData.plan?.label || item.label}`,
       order_id: orderData.orderId || orderData.subscriptionId,
       prefill: { email: userEmail },
-      theme: { color: "#2563eb" },
+      theme: { color: "#6366f1" },
       handler: async (response) => {
         setLoading(true);
         try {
-          await verifyPayment({
+          await verifyPayment(auth, {
             razorpay_order_id: response.razorpay_order_id,
             razorpay_payment_id: response.razorpay_payment_id,
             razorpay_signature: response.razorpay_signature,
@@ -106,8 +108,8 @@ export default function PaymentModal({ onClose, onSuccess, type, item, userEmail
         <h2 className="auth-title">{type === "credits" ? `Buy ${item.label}` : `Subscribe to ${item.label}`}</h2>
         <p className="auth-subtitle">
           {type === "credits"
-            ? `Get ${item.credits} PDF credits for {item.price}`
-            : `${item.price} — Unlimited PDF uploads, priority processing, larger files`}
+            ? `Get ${item.credits} PDF credits for ${item.price || (item.amount ? `₹${Math.round(item.amount / 100)}` : "")}`
+            : `${item.price || (item.amount ? `₹${Math.round(item.amount / 100)}` : "")} — Unlimited PDF uploads, priority processing, larger files`}
         </p>
 
         <div className="payment-summary">
@@ -117,7 +119,7 @@ export default function PaymentModal({ onClose, onSuccess, type, item, userEmail
           </div>
           <div className="payment-row total">
             <span>Total</span>
-            <strong>{item.price}</strong>
+            <strong>{item.price || (item.amount ? `₹${Math.round(item.amount / 100)}` : "")}</strong>
           </div>
         </div>
 
@@ -128,7 +130,7 @@ export default function PaymentModal({ onClose, onSuccess, type, item, userEmail
           onClick={openRazorpayCheckout}
           disabled={loading || !orderData}
         >
-          {loading ? "Processing..." : `Pay ${item.price} with Razorpay`}
+          {loading ? "Processing..." : `Pay ${item.price || (item.amount ? `₹${Math.round(item.amount / 100)}` : "")} with Razorpay`}
         </button>
 
         <p className="auth-note">🔒 Secure payment via Razorpay. We never store your card details.</p>

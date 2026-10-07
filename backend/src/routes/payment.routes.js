@@ -29,13 +29,19 @@ paymentRouter.get("/credits/balance", requireAuth, async (req, res, next) => {
 });
 
 // GET /api/payments/credits/packs — List available credit packs
-paymentRouter.get("/credits/packs", requireAuth, async (req, res) => {
-  res.json({ packs: CREDIT_PACKS });
+paymentRouter.get("/credits/packs", async (req, res) => {
+  const packs = Array.isArray(CREDIT_PACKS)
+    ? CREDIT_PACKS
+    : Object.entries(CREDIT_PACKS).map(([packId, p]) => ({ ...p, packId }));
+  res.json({ packs });
 });
 
 // GET /api/payments/subscription/plans — List available subscription plans
-paymentRouter.get("/subscription/plans", requireAuth, async (req, res) => {
-  res.json({ plans: SUBSCRIPTION_PLANS });
+paymentRouter.get("/subscription/plans", async (req, res) => {
+  const plans = Array.isArray(SUBSCRIPTION_PLANS)
+    ? SUBSCRIPTION_PLANS
+    : Object.entries(SUBSCRIPTION_PLANS).map(([planId, p]) => ({ ...p, planId }));
+  res.json({ plans });
 });
 
 // POST /api/payments/credits/order — Create Razorpay order for credit pack
