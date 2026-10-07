@@ -16,11 +16,13 @@ export default function PaymentModal({ auth, onClose, onSuccess, type, item, use
     return () => document.body.removeChild(script);
   }, []);
 
+  const effectiveEmail = userEmail || auth?.email || "customer@pdfchat.ai";
+
   useEffect(() => {
-    if (type && item && userEmail) {
+    if (type && item) {
       createOrder();
     }
-  }, [type, item, userEmail]);
+  }, [type, item]);
 
   const createOrder = async () => {
     setLoading(true);
@@ -49,7 +51,7 @@ export default function PaymentModal({ auth, onClose, onSuccess, type, item, use
       name: "PDF Chat",
       description: type === "credits" ? `Credit Pack: ${orderData.pack?.label || item.label}` : `Subscription: ${orderData.plan?.label || item.label}`,
       order_id: orderData.orderId || orderData.subscriptionId,
-      prefill: { email: userEmail },
+      prefill: { email: effectiveEmail },
       theme: { color: "#6366f1" },
       handler: async (response) => {
         setLoading(true);

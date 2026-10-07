@@ -2525,3 +2525,99 @@
   }
 }
 
+/* ── GitHub README Studio Markdown Preview & Badges Flow ── */
+.readme-markdown-preview {
+  color: #e2e8f0;
+  line-height: 1.7;
+}
+
+.readme-markdown-preview img {
+  display: inline-block !important;
+  vertical-align: middle !important;
+  margin: 3px 4px !important;
+  max-width: 100%;
+}
+
+.readme-markdown-preview a {
+  display: inline-block !important;
+  text-decoration: none !important;
+}
+
+.readme-markdown-preview p {
+  margin-top: 0.5em !important;
+  margin-bottom: 0.8em !important;
+  line-height: 1.8 !important;
+}
+
+.readme-markdown-preview h1 {
+  font-size: 1.5rem !important;
+  font-weight: 800 !important;
+  color: #ffffff !important;
+  margin-top: 1rem !important;
+  margin-bottom: 0.5rem !important;
+}
+
+.readme-markdown-preview h2 {
+  font-size: 1.25rem !important;
+  font-weight: 700 !important;
+  color: #ffffff !important;
+  margin-top: 1.25rem !important;
+  margin-bottom: 0.5rem !important;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  padding-bottom: 0.3rem;
+}
+
+.readme-markdown-preview h3 {
+  font-size: 1.1rem !important;
+  font-weight: 700 !important;
+  color: #f1f5f9 !important;
+  margin-top: 1rem !important;
+  margin-bottom: 0.4rem !important;
+}
+
+.readme-markdown-preview h4 {
+  font-size: 0.95rem !important;
+  font-weight: 600 !important;
+  color: #cbd5e1 !important;
+  margin-top: 0.75rem !important;
+  margin-bottom: 0.3rem !important;
+}
+
+.readme-markdown-preview ul {
+  list-style-type: disc !important;
+  padding-left: 1.25rem !important;
+  margin: 0.5rem 0 !important;
+}
+
+.readme-markdown-preview li {
+  margin-bottom: 0.3rem !important;
+}
+
+.readme-markdown-preview table {
+  width: 100% !important;
+  border-collapse: collapse !important;
+  margin: 1rem 0 !important;
+  font-size: 0.85rem !important;
+}
+
+.readme-markdown-preview th,
+.readme-markdown-preview td {
+  border: 1px solid rgba(255, 255, 255, 0.12) !important;
+  padding: 8px 12px !important;
+  text-align: left !important;
+}
+
+.readme-markdown-preview th {
+  background: rgba(255, 255, 255, 0.05) !important;
+  color: #a5b4fc !important;
+  font-weight: 600 !important;
+}
+
+.readme-markdown-preview blockquote {
+  border-left: 3px solid #6366f1 !important;
+  padding-left: 12px !important;
+  color: #94a3b8 !important;
+  margin: 0.75rem 0 !important;
+}
+
+

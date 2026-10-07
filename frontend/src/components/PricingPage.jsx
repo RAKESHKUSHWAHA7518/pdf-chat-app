@@ -3,6 +3,7 @@ import { useState, useEffect } from "react";
 import { X, Sparkles, Check, Zap, ShieldCheck } from "lucide-react";
 import { getCreditPacks, getSubscriptionPlans } from "../api.js";
 import PaymentModal from "./PaymentModal.jsx";
+import "../App.css";
 
 const DEFAULT_SUB_FEATURES = {
   pro_monthly: [

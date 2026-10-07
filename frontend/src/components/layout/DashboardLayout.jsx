@@ -1,17 +1,17 @@
-// src/components/layout/DashboardLayout.jsx — Unified multi-tool dashboard shell with responsive sidebar.
-import { useState, useEffect } from "react";
-import { Outlet, useNavigate } from "react-router-dom";
+import { useState, useEffect, useCallback } from "react";
+import { Outlet } from "react-router-dom";
 import { Sidebar } from "../dashboard/Sidebar";
 import { useAuth } from "../../hooks/useAuth";
 import { useGithubIntegration } from "../../hooks/useGithubIntegration";
 import { getCreditBalance } from "../../api";
+import PricingPage from "../PricingPage.jsx";
 
 export function DashboardLayout() {
   const [collapsed, setCollapsed] = useState(() => (typeof window !== "undefined" ? window.innerWidth < 1024 : false));
   const { auth, isAuthenticated } = useAuth();
-  const navigate = useNavigate();
   const { status: githubStatus } = useGithubIntegration(auth);
   const [credits, setCredits] = useState(0);
+  const [showPricingModal, setShowPricingModal] = useState(false);
 
   useEffect(() => {
     const handleResize = () => {
@@ -23,20 +23,24 @@ export function DashboardLayout() {
     return () => window.removeEventListener("resize", handleResize);
   }, []);
 
-  useEffect(() => {
-    if (isAuthenticated) {
+  const refreshCredits = useCallback(() => {
+    if (isAuthenticated && auth) {
       getCreditBalance(auth)
         .then((bal) => setCredits(bal?.credits ?? 0))
         .catch(() => {});
     }
   }, [auth, isAuthenticated]);
 
+  useEffect(() => {
+    refreshCredits();
+  }, [refreshCredits]);
+
   const handleManagePlan = () => {
-    navigate("/pricing");
+    setShowPricingModal(true);
   };
 
   return (
-    <div className="h-screen w-screen flex bg-slate-950 text-slate-100 overflow-hidden">
+    <div className="h-screen w-screen flex bg-slate-950 text-slate-100 overflow-hidden relative">
       {/* Collapsible Multi-Tool Sidebar */}
       <Sidebar
         collapsed={collapsed}
@@ -49,8 +53,19 @@ export function DashboardLayout() {
 
       {/* Main Content Area */}
       <main className="flex-1 flex flex-col h-screen overflow-hidden bg-slate-950 relative">
-        <Outlet />
+        <Outlet context={{ openPricingModal: handleManagePlan, refreshCredits, credits }} />
       </main>
+
+      {/* Manage Plan & Pricing Modal Popup */}
+      {showPricingModal && (
+        <PricingPage
+          auth={auth}
+          onClose={() => {
+            setShowPricingModal(false);
+            refreshCredits();
+          }}
+        />
+      )}
     </div>
   );
 }

@@ -145,12 +145,25 @@ export function Sidebar({ collapsed, onToggle, auth, githubStatus, credits, onMa
               <button
                 type="button"
                 onClick={onManagePlan}
-                className="text-[10px] font-bold text-indigo-400 hover:text-indigo-300 transition-colors"
+                className="text-[10px] font-bold text-indigo-400 hover:text-indigo-300 transition-colors cursor-pointer"
+                title="Manage Plan & Credits"
               >
                 Manage
               </button>
             )}
           </div>
+        )}
+
+        {/* Collapsed view credit button */}
+        {collapsed && auth && onManagePlan && (
+          <button
+            type="button"
+            onClick={onManagePlan}
+            className="w-full flex justify-center p-2 rounded-xl bg-indigo-950/40 border border-indigo-500/20 text-indigo-400 hover:bg-indigo-900/40 hover:text-indigo-300 transition-colors cursor-pointer"
+            title={`${credits ?? 0} Credits — Manage Plan`}
+          >
+            <Zap className="w-4 h-4" />
+          </button>
         )}
       </div>
     </aside>

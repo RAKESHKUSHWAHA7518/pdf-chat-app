@@ -82,7 +82,8 @@ Extract and return ONLY a JSON object with this exact shape:
     {
       "title": "Project Name",
       "desc": "1-2 impactful sentences describing what it is, technologies used, and key outcomes or scale",
-      "link": "URL or github placeholder"
+      "link": "GitHub repo URL if present (or github.com placeholder)",
+      "liveUrl": "Live demo, hosted website, or deployment URL if mentioned (or empty string)"
     }
   ],
   "socials": {
@@ -171,3 +172,121 @@ Return ONLY a JSON object with this exact shape:
     throw new ApiError(500, "ATS_SCAN_FAILED", "Failed to run ATS match scan");
   }
 }
+
+/**
+ * Uses Gemini to generate a complete high-impact GitHub profile based on target role, tone, and skills.
+ * @param {object} params
+ * @returns {Promise<object>}
+ */
+export async function generateGithubProfileAi({ role, tone = "impactful", currentBio = "", name = "Developer", targetFocus = "", customPrompt = "" }) {
+  const model = genAI.getGenerativeModel({
+    model: env.GEMINI_CHAT_MODEL,
+    generationConfig: {
+      responseMimeType: "application/json",
+      temperature: 0.7,
+    },
+  });
+
+  const prompt = `You are a world-class tech career strategist, senior developer advocate, and GitHub profile branding expert.
+Generate a compelling, modern, and viral GitHub Profile README content blueprint for a software engineer.
+
+TARGET DETAILS:
+- Candidate Name: ${name || "Developer"}
+- Target Role / Specialization: ${role || "Full-Stack AI Software Engineer"}
+- Tone: ${tone} (impactful, creative, technical, minimalist, or playful)
+- Existing Bio / Notes (if any): ${currentBio || "None"}
+- Additional Focus / Skills: ${targetFocus || "Modern full-stack, cloud & AI"}
+
+USER'S CUSTOM INSTRUCTIONS / PROMPT:
+${customPrompt ? `"""${customPrompt}"""\nCRITICAL INSTRUCTION: Strictly prioritize and tailor the profile to the user's specific prompt above! Reflect their stated background, achievements, niche technologies, and creative requests.` : "No custom prompt provided — generate based on role and tone defaults."}
+
+Return ONLY a JSON object matching this schema:
+{
+  "title": "A punchy, professional title/headline with high-signal keywords (e.g. 'Senior Full-Stack Engineer | AI Agents & Distributed Cloud')",
+  "bio": "An engaging 2-3 sentence technical bio that showcases engineering mindset, current passions, and impact. Avoid generic cliches.",
+  "typingLines": [
+    "Line 1 for dynamic typewriter typing SVG animation (e.g. 'Full-Stack AI Software Engineer')",
+    "Line 2 (e.g. 'Building Autonomous Agents & Next.js Platforms')",
+    "Line 3 (e.g. 'Open Source Contributor & Lifelong Learner')"
+  ],
+  "aboutMe": {
+    "workingOn": "Specific project or architecture being built right now",
+    "learning": "Cutting-edge tool, framework, or paradigm currently exploring",
+    "collaborating": "Kinds of open-source or product initiatives looking to join",
+    "askMeAbout": "3-4 technical specialties or domains",
+    "funFact": "A witty, interesting developer-related fun fact"
+  },
+  "suggestedTech": [
+    // Array of 6-12 relevant technologies from the prompt or specialization matching:
+    // "React", "Next.js", "TypeScript", "JavaScript", "TailwindCSS", "Node.js", "Express",
+    // "Python", "FastAPI", "Go", "Rust", "MongoDB", "PostgreSQL", "Docker", "AWS", "Git"
+  ],
+  "suggestedProjects": [
+    {
+      "title": "High-impact Project Name matching the prompt",
+      "desc": "1-2 sentence description highlighting problem solved, tech stack, and key architecture",
+      "link": "https://github.com",
+      "liveUrl": "https://demo.app"
+    },
+    {
+      "title": "Second Impressive Project",
+      "desc": "1-2 sentence description",
+      "link": "https://github.com",
+      "liveUrl": "https://demo.app"
+    }
+  ]
+}`;
+
+  try {
+    const result = await model.generateContent(prompt);
+    const text = result.response.text();
+    return JSON.parse(text);
+  } catch (err) {
+    logger.error({ err: err.message }, "Gemini generate profile AI error");
+    throw new ApiError(500, "GENERATION_FAILED", "Failed to generate profile with AI");
+  }
+}
+
+/**
+ * Polishes or enhances an individual bio or title with Gemini.
+ * @param {object} params
+ * @returns {Promise<object>}
+ */
+export async function enhanceBioAi({ text, role = "Developer", mode = "bio" }) {
+  if (!text || text.trim().length === 0) {
+    throw new ApiError(400, "TEXT_REQUIRED", "Please provide text to enhance");
+  }
+
+  const model = genAI.getGenerativeModel({
+    model: env.GEMINI_CHAT_MODEL,
+    generationConfig: {
+      responseMimeType: "application/json",
+      temperature: 0.6,
+    },
+  });
+
+  const prompt = `You are a top tech recruiter and GitHub branding specialist.
+Rewrite and elevate the following ${mode === "title" ? "developer headline/title" : "short developer bio"} into a high-impact, professional, and engaging version.
+Context Role: ${role}
+
+ORIGINAL TEXT:
+"${text}"
+
+Return JSON:
+{
+  "enhanced": "The polished, modern, high-impact text",
+  "alternatives": [
+    "Alternative 1 with a different punchy tone",
+    "Alternative 2 with a more technical tone"
+  ]
+}`;
+
+  try {
+    const result = await model.generateContent(prompt);
+    return JSON.parse(result.response.text());
+  } catch (err) {
+    logger.error({ err: err.message }, "Gemini enhance bio AI error");
+    throw new ApiError(500, "ENHANCE_FAILED", "Failed to enhance text with AI");
+  }
+}
+

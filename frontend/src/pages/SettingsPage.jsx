@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useOutletContext } from "react-router-dom";
 import {
   User,
   Shield,
@@ -18,11 +18,14 @@ import { useAuth } from "../hooks/useAuth";
 import { useGithubIntegration } from "../hooks/useGithubIntegration";
 import { getCreditBalance } from "../api";
 import { Button, InteractiveCard, Badge } from "../components/ui";
+import PricingPage from "../components/PricingPage.jsx";
 
 export function SettingsPage() {
   const { auth, isAuthenticated, logout } = useAuth();
   const navigate = useNavigate();
+  const outlet = useOutletContext();
   const [balance, setBalance] = useState(null);
+  const [showPricingModal, setShowPricingModal] = useState(false);
 
   // GitHub integration hook
   const { status: ghStatus, loading: ghLoading, connectWithToken, disconnect } = useGithubIntegration(auth);
@@ -119,11 +122,19 @@ export function SettingsPage() {
               <CreditCard className="w-4 h-4 text-purple-400" />
               Subscription & Credits
             </h3>
-            <Link to="/pricing">
-              <Button size="sm" variant="outline">
-                Manage Plans
-              </Button>
-            </Link>
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => {
+                if (outlet?.openPricingModal) {
+                  outlet.openPricingModal();
+                } else {
+                  setShowPricingModal(true);
+                }
+              }}
+            >
+              Manage Plans
+            </Button>
           </div>
 
           <div className="grid sm:grid-cols-3 gap-4 text-xs">
@@ -261,6 +272,24 @@ export function SettingsPage() {
           </Button>
         </InteractiveCard>
       </div>
+
+      {/* Pricing / Plan Management Modal */}
+      {showPricingModal && (
+        <PricingPage
+          auth={auth}
+          onClose={() => {
+            setShowPricingModal(false);
+            if (isAuthenticated && auth) {
+              getCreditBalance(auth)
+                .then((b) => setBalance(b))
+                .catch(() => {});
+            }
+            if (outlet?.refreshCredits) {
+              outlet.refreshCredits();
+            }
+          }}
+        />
+      )}
     </div>
   );
 }

@@ -10,6 +10,8 @@ import {
   extractTextFromSession,
   synthesizeResumeToProfile,
   analyzeAtsMatch,
+  generateGithubProfileAi,
+  enhanceBioAi,
 } from "../services/careerService.js";
 
 const upload = multer({
@@ -104,3 +106,51 @@ careerRouter.post("/ats-scan", requireAuth, upload.single("resume"), async (req,
     next(err);
   }
 });
+
+/**
+ * POST /api/career/generate-profile-ai
+ * Generates a complete high-impact GitHub profile with AI based on target role & tone.
+ */
+careerRouter.post("/generate-profile-ai", async (req, res, next) => {
+  try {
+    const { role, tone, currentBio, name, targetFocus, customPrompt } = req.body || {};
+    const result = await generateGithubProfileAi({
+      role: String(role || "Full-Stack AI Software Engineer").trim(),
+      tone: String(tone || "impactful").trim(),
+      currentBio: String(currentBio || "").trim(),
+      name: String(name || "").trim(),
+      targetFocus: String(targetFocus || "").trim(),
+      customPrompt: String(customPrompt || "").trim(),
+    });
+
+    res.json({
+      success: true,
+      profile: result,
+    });
+  } catch (err) {
+    next(err);
+  }
+});
+
+/**
+ * POST /api/career/enhance-bio-ai
+ * Polishes or enhances short bio or title with AI.
+ */
+careerRouter.post("/enhance-bio-ai", async (req, res, next) => {
+  try {
+    const { text, role, mode } = req.body || {};
+    const result = await enhanceBioAi({
+      text: String(text || "").trim(),
+      role: String(role || "Full-Stack Software Engineer").trim(),
+      mode: String(mode || "bio").trim(),
+    });
+
+    res.json({
+      success: true,
+      ...result,
+    });
+  } catch (err) {
+    next(err);
+  }
+});
+

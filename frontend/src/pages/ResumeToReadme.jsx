@@ -1,6 +1,7 @@
 // src/pages/ResumeToReadme.jsx — Cross-tool resume to GitHub Profile README generator.
 import { useState, useEffect, useRef } from "react";
-import { useNavigate, Link } from "react-router-dom";
+import { useNavigate, Link, useOutletContext } from "react-router-dom";
+import PricingPage from "../components/PricingPage.jsx";
 import {
   FileText,
   UploadCloud,
@@ -25,6 +26,8 @@ import { Button, InteractiveCard, Badge } from "../components/ui";
 export function ResumeToReadme() {
   const { auth, isAuthenticated } = useAuth();
   const navigate = useNavigate();
+  const outlet = useOutletContext();
+  const [showPricingModal, setShowPricingModal] = useState(false);
 
   // Mode: "library" | "upload" | "paste"
   const [inputMode, setInputMode] = useState("upload");
@@ -174,9 +177,19 @@ export function ResumeToReadme() {
               <span className="text-slate-400">Available Credits:</span>
               <span className="font-bold text-white">{credits ?? 0}</span>
             </div>
-            <Link to="/pricing">
-              <Button size="sm" variant="outline">Get More</Button>
-            </Link>
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => {
+                if (outlet?.openPricingModal) {
+                  outlet.openPricingModal();
+                } else {
+                  setShowPricingModal(true);
+                }
+              }}
+            >
+              Get More
+            </Button>
           </div>
         )}
       </div>
@@ -450,6 +463,20 @@ export function ResumeToReadme() {
                         <div key={idx} className="p-3 rounded-xl bg-slate-950/60 border border-slate-800/80 space-y-1">
                           <span className="text-xs font-bold text-white block truncate">{proj.title}</span>
                           <p className="text-[11px] text-slate-400 line-clamp-2 leading-relaxed">{proj.desc}</p>
+                          {(proj.link || proj.liveUrl) && (
+                            <div className="flex items-center gap-2 pt-1 text-[10px]">
+                              {proj.link && (
+                                <span className="text-indigo-400 font-mono truncate">
+                                  Repo: {proj.link}
+                                </span>
+                              )}
+                              {proj.liveUrl && (
+                                <span className="text-emerald-400 font-mono truncate">
+                                  Live: {proj.liveUrl}
+                                </span>
+                              )}
+                            </div>
+                          )}
                         </div>
                       ))}
                     </div>
@@ -498,6 +525,21 @@ export function ResumeToReadme() {
           )}
         </div>
       </div>
+      {/* Pricing / Buy Credits Modal Popup */}
+      {showPricingModal && (
+        <PricingPage
+          auth={auth}
+          onClose={() => {
+            setShowPricingModal(false);
+            if (outlet?.refreshCredits) outlet.refreshCredits();
+            if (isAuthenticated && auth) {
+              getCreditBalance(auth)
+                .then((bal) => setCredits(bal?.credits ?? 0))
+                .catch(() => {});
+            }
+          }}
+        />
+      )}
     </div>
   );
 }

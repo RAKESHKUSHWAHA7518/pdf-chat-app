@@ -182,3 +182,29 @@ export async function scanResumeAts(auth, { file, sessionId, resumeText, jobDesc
   return data;
 }
 
+export async function generateProfileAi(auth, payload) {
+  const res = await fetch(`${API_URL}/career/generate-profile-ai`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...authHeaders(auth) },
+    body: JSON.stringify(payload),
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) {
+    throw httpError(res.status, errorMessage(data, "Failed to generate profile with AI"));
+  }
+  return data.profile;
+}
+
+export async function enhanceBioAi(auth, payload) {
+  const res = await fetch(`${API_URL}/career/enhance-bio-ai`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...authHeaders(auth) },
+    body: JSON.stringify(payload),
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) {
+    throw httpError(res.status, errorMessage(data, "Failed to enhance text with AI"));
+  }
+  return data;
+}
+
