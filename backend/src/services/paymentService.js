@@ -194,7 +194,7 @@ async function activateSubscription(userId, planId, razorpaySubscriptionId) {
 }
 
 export async function deductCredit(userId, sessionId) {
-  const user = await collections.users().findOne({ _id: userId });
+  let user = await collections.users().findOne({ _id: userId });
   if (!user) throw new ApiError(404, "USER_NOT_FOUND", "User not found");
 
   const hasActiveSubscription =
@@ -204,9 +204,14 @@ export async function deductCredit(userId, sessionId) {
 
   if (hasActiveSubscription) return { success: true, subscription: true };
 
-  const credits = user.credits || 0;
+  if (user.credits === undefined) {
+    await collections.users().updateOne({ _id: userId }, { $set: { credits: 3 } });
+    user.credits = 3;
+  }
+
+  const credits = user.credits ?? 0;
   if (credits < 1) {
-    throw new ApiError(402, "INSUFFICIENT_CREDITS", "Not enough credits. Purchase credits or subscribe to Pro.");
+    throw new ApiError(402, "INSUFFICIENT_CREDITS", "You have used all your 3 free credits. Please subscribe to Pro or purchase a credit pack to continue.");
   }
 
   const updated = await collections.users().findOneAndUpdate(
@@ -232,13 +237,36 @@ export async function deductCredit(userId, sessionId) {
 }
 
 export async function getUserCredits(userId) {
-  const user = await collections.users().findOne(
+  let user = await collections.users().findOne(
     { _id: userId },
     { projection: { credits: 1, subscription: 1 } }
   );
+  if (!user) {
+    return {
+      credits: 0,
+      subscription: { status: "inactive" },
+      isPro: false,
+      plan: "free",
+      planLabel: "Free Account",
+    };
+  }
+  if (user.credits === undefined) {
+    await collections.users().updateOne({ _id: userId }, { $set: { credits: 3 } });
+    user.credits = 3;
+  }
+  const isPro = Boolean(
+    user?.subscription?.status === "active" &&
+    user?.subscription?.currentPeriodEnd &&
+    new Date(user.subscription.currentPeriodEnd) > new Date()
+  );
   return {
-    credits: user?.credits || 0,
+    credits: user?.credits ?? 0,
     subscription: user?.subscription || { status: "inactive" },
+    isPro,
+    plan: isPro ? (user?.subscription?.planId || "pro_monthly") : "free",
+    planLabel: isPro
+      ? (user?.subscription?.planId === "pro_yearly" ? "Pro Yearly" : "Pro Monthly")
+      : "Free Account",
   };
 }
 

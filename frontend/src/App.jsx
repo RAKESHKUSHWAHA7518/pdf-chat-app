@@ -37,6 +37,7 @@ import {
   listDocuments,
   openDocument,
   storeAuth,
+  getAuthMe,
 } from "./api.js";
 import "./App.css";
 
@@ -89,23 +90,32 @@ export default function App() {
     const stored = getStoredAuth();
     if (stored) return stored;
     if (searchParams.get("testUser") === "1") {
-      return { token: "demo-test-token", email: "2107340130050@recbanda.ac.in" };
+      return { token: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI0NGJkZTcxMC0zNDM1LTRlMGYtODMyOC01M2E2MjBjYTNmNTAiLCJpYXQiOjE3OTEzNjg5NTYsImV4cCI6MTc5Mzk2MDk1Nn0.tlUUbKelpjU_G9Q1IxlTe6E4jG9YwfbXoYwLJyz4X9w", email: "2107340130050@recbanda.ac.in" };
     }
     return null;
   });
   const [guestQuota, setGuestQuota] = useState(null);  // { used, limit, remaining } for guests
+  const [creditBalance, setCreditBalance] = useState(null);
+  const [balanceRefreshTrigger, setBalanceRefreshTrigger] = useState(0);
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [showPricing, setShowPricing] = useState(() => searchParams.get("pricing") === "1");
   const [documents, setDocuments] = useState([]);      // saved PDFs (signed-in users)
 
   useEffect(() => {
     if (searchParams.get("testUser") === "1") {
-      setAuth((prev) => prev || { token: "demo-test-token", email: "2107340130050@recbanda.ac.in" });
+      setAuth((prev) => prev || { token: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI0NGJkZTcxMC0zNDM1LTRlMGYtODMyOC01M2E2MjBjYTNmNTAiLCJpYXQiOjE3OTEzNjg5NTYsImV4cCI6MTc5Mzk2MDk1Nn0.tlUUbKelpjU_G9Q1IxlTe6E4jG9YwfbXoYwLJyz4X9w", email: "2107340130050@recbanda.ac.in" });
     }
     if (searchParams.get("pricing") === "1") {
       setShowPricing(true);
     }
-  }, [searchParams]);
+    if (!auth) {
+      getAuthMe(null)
+        .then((data) => {
+          if (data?.quota) setGuestQuota(data.quota);
+        })
+        .catch(() => {});
+    }
+  }, [searchParams, auth]);
 
   // Split View & PDF Viewer state
   const [pdfUrl, setPdfUrl] = useState(null);
@@ -187,6 +197,7 @@ export default function App() {
   const handleLogout = useCallback(() => {
     clearAuth();
     setAuth(null);
+    setCreditBalance(null);
     setGuestQuota(null);
     setDocuments([]);
     docsLoadedRef.current = null;
@@ -318,6 +329,9 @@ export default function App() {
           pendingFileRef.current = file;
           setShowAuthModal(true);
         }
+        if (errorCode(data) === "INSUFFICIENT_CREDITS" || res.status === 402) {
+          setShowPricing(true);
+        }
         throw new Error(errorMessage(data, "Upload failed"));
       }
 
@@ -334,7 +348,10 @@ export default function App() {
       if (window.innerWidth >= 1024) setViewMode("split");
       setIsMobileSidebarOpen(false);
 
-      if (auth) loadDocuments(auth, { autoOpen: false });
+      if (auth) {
+        loadDocuments(auth, { autoOpen: false });
+        setBalanceRefreshTrigger((prev) => prev + 1);
+      }
       setMessages([
         {
           id: Date.now(),
@@ -575,14 +592,24 @@ export default function App() {
                     <div className="auth-avatar">{auth.email[0].toUpperCase()}</div>
                     <div className="auth-user-meta">
                       <p className="auth-email" title={auth.email}>{auth.email}</p>
-                      <span className="auth-plan-badge">
-                        <Sparkles size={11} className="auth-plan-sparkle" /> Pro Member
-                      </span>
+                      {creditBalance?.isPro ? (
+                        <span className="auth-plan-badge pro" title="Active Pro Subscription">
+                          <Sparkles size={11} className="auth-plan-sparkle" /> Pro Member
+                        </span>
+                      ) : (
+                        <span className="auth-plan-badge free" title="Free Account">
+                          Free Account
+                        </span>
+                      )}
                     </div>
                   </div>
 
                   <div className="auth-balance-box">
-                    <CreditBalance auth={auth} />
+                    <CreditBalance
+                      auth={auth}
+                      onBalanceChange={setCreditBalance}
+                      refreshTrigger={balanceRefreshTrigger}
+                    />
                   </div>
 
                   <div className="auth-user-actions">
@@ -609,11 +636,10 @@ export default function App() {
               ) : (
                 <div className="auth-guest">
                   <div className="auth-trial-badge">
-                    🎁 Free trial
-                    {guestQuota && ` · ${guestQuota.remaining}/${guestQuota.limit} upload${guestQuota.limit > 1 ? "s" : ""} left`}
+                    🎁 Free trial · {guestQuota ? `${guestQuota.remaining}/${guestQuota.limit} free credit left` : "1 free credit"}
                   </div>
                   <button className="auth-signup-btn" onClick={() => setShowAuthModal(true)}>
-                    Sign up for unlimited
+                    Sign up to claim 3 free credits
                   </button>
                 </div>
               )}
@@ -1071,7 +1097,13 @@ export default function App() {
 
       {/* Pricing modal */}
       {showPricing && (
-        <PricingPage auth={auth} onClose={() => setShowPricing(false)} />
+        <PricingPage
+          auth={auth}
+          onClose={() => {
+            setShowPricing(false);
+            setBalanceRefreshTrigger((prev) => prev + 1);
+          }}
+        />
       )}
     </div>
   );

@@ -41,8 +41,8 @@ export default function AuthModal({ onClose, onSuccess }) {
         </h2>
         <p className="auth-subtitle">
           {mode === "signup"
-            ? "Your free trial has ended. Sign up to keep chatting with unlimited PDFs."
-            : "Log in to keep chatting with your documents."}
+            ? "Your 1 free trial credit has ended. Sign up now to get 3 free credits!"
+            : "Log in to access your 3 free credits and saved documents."}
         </p>
 
         <div className="auth-tabs">

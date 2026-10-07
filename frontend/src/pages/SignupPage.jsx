@@ -73,14 +73,14 @@ export function SignupPage() {
               <span className="text-gradient">Document Intelligence</span>
             </h2>
             <p className="text-xs text-slate-400 leading-relaxed">
-              Create your account in 30 seconds. No credit card required. Free tier includes daily uploads and full semantic search.
+              Create your account in 30 seconds. No credit card required. Includes 3 free document credits immediately to index and chat with your PDFs.
             </p>
           </div>
 
           <div className="space-y-3 pt-6 border-t border-slate-800/80 text-xs text-slate-300">
             <div className="flex items-center gap-2">
               <Zap className="w-4 h-4 text-amber-400 shrink-0" />
-              <span>Free tier with 3 daily uploads forever</span>
+              <span>3 free document credits upon signup</span>
             </div>
             <div className="flex items-center gap-2">
               <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />

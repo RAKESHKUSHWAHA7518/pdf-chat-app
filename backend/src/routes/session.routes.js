@@ -15,6 +15,7 @@ import { deleteSessionVectors } from "../lib/vectorStore.js";
 import { saveUserDocument, documentHasVectors } from "../services/documentService.js";
 import { hasGuestQuota, recordGuestUpload, getGuestQuota } from "../services/guestService.js";
 import { deductCredit } from "../services/paymentService.js";
+import { collections } from "../db/database.js";
 import { validate } from "../middleware/validate.js";
 import { uploadLimiter } from "../middleware/rateLimiter.js";
 import { getGuestId } from "../middleware/auth.js";
@@ -50,7 +51,8 @@ sessionRouter.post("/upload", uploadLimiter, upload.single("pdf"), async (req, r
   const fileName = req.file.originalname;
   const log = logger.child({ fileName, userId: req.userId ?? "guest" });
 
-  // Freemium gate: authenticated users upload freely; guests get a limited trial
+  // Freemium gate:
+  // 1. Guests get 1 free upload trial
   const guestId = req.userId ? null : getGuestId(req);
   if (!req.userId && !(await hasGuestQuota(guestId))) {
     fs.unlink(filePath, () => {});
@@ -58,9 +60,33 @@ sessionRouter.post("/upload", uploadLimiter, upload.single("pdf"), async (req, r
       new ApiError(
         403,
         "AUTH_REQUIRED",
-        `Your ${env.GUEST_FREE_UPLOADS} free upload${env.GUEST_FREE_UPLOADS > 1 ? "s have" : " has"} been used. Create a free account to keep going.`
+        "Your 1 free trial credit has been used. Create a free account to get 3 free credits!"
       )
     );
+  }
+
+  // 2. Authenticated users: must have active Pro subscription OR >= 1 credit
+  if (req.userId) {
+    const user = await collections.users().findOne(
+      { _id: req.userId },
+      { projection: { credits: 1, subscription: 1 } }
+    );
+    const hasActiveSub = Boolean(
+      user?.subscription?.status === "active" &&
+      user?.subscription?.currentPeriodEnd &&
+      new Date(user.subscription.currentPeriodEnd) > new Date()
+    );
+    const availableCredits = user?.credits ?? 3;
+    if (!hasActiveSub && availableCredits < 1) {
+      fs.unlink(filePath, () => {});
+      return next(
+        new ApiError(
+          402,
+          "INSUFFICIENT_CREDITS",
+          "You have used all your 3 free credits. Please subscribe to Pro or purchase a credit pack to continue."
+        )
+      );
+    }
   }
 
   // Reserve the session id up front so vectors can be stored under it
@@ -71,12 +97,12 @@ sessionRouter.post("/upload", uploadLimiter, upload.single("pdf"), async (req, r
     const { pageCount, chunkCount, ragChain } = await processPdf(sessionId, filePath);
     log.info({ pageCount, chunkCount }, "PDF indexed");
 
-    // Only count the upload after it processed successfully
+    // Only count/deduct after successful indexing
+    let creditResult = null;
     if (guestId) {
       await recordGuestUpload(guestId);
     } else if (req.userId) {
-      // Deduct credit for authenticated users (if no active subscription)
-      const creditResult = await deductCredit(req.userId, sessionId);
+      creditResult = await deductCredit(req.userId, sessionId);
       log.info({ creditsRemaining: creditResult.creditsRemaining, subscription: creditResult.subscription }, "Credit deducted");
     }
 
@@ -102,6 +128,7 @@ sessionRouter.post("/upload", uploadLimiter, upload.single("pdf"), async (req, r
       chunkCount,
       message: `PDF processed successfully! ${chunkCount} chunks indexed.`,
       ...(guestId ? { guestQuota: await getGuestQuota(guestId) } : {}),
+      ...(creditResult ? { creditsRemaining: creditResult.creditsRemaining } : {}),
     });
   } catch (err) {
     // Roll back any partially indexed vectors for this failed upload

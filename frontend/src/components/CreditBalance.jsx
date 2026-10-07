@@ -2,19 +2,25 @@
 import { useEffect, useState } from "react";
 import { getCreditBalance } from "../api.js";
 
-export default function CreditBalance({ auth, onRefresh }) {
+export default function CreditBalance({ auth, onBalanceChange, refreshTrigger, onRefresh }) {
   const [balance, setBalance] = useState(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (auth) fetchBalance();
-  }, [auth]);
+    if (auth) {
+      fetchBalance();
+    } else {
+      setBalance(null);
+      onBalanceChange?.(null);
+    }
+  }, [auth, refreshTrigger]);
 
   const fetchBalance = async (retries = 2) => {
     setLoading(true);
     try {
       const data = await getCreditBalance(auth);
       setBalance(data);
+      onBalanceChange?.(data);
     } catch (err) {
       if (retries > 0 && (err.status === 502 || err.status === 504 || err.message?.includes("starting up"))) {
         setTimeout(() => fetchBalance(retries - 1), 1500);
@@ -40,10 +46,13 @@ export default function CreditBalance({ auth, onRefresh }) {
   if (!balance) return null;
 
   const { credits, subscription } = balance;
-  const hasActiveSub =
-    subscription?.status === "active" &&
-    subscription?.currentPeriodEnd &&
-    new Date(subscription.currentPeriodEnd) > new Date();
+  const isPro =
+    balance.isPro ??
+    Boolean(
+      subscription?.status === "active" &&
+      subscription?.currentPeriodEnd &&
+      new Date(subscription.currentPeriodEnd) > new Date()
+    );
 
   return (
     <div className="credit-balance-row">
@@ -56,12 +65,14 @@ export default function CreditBalance({ auth, onRefresh }) {
       </div>
 
       <div className="plan-status-pill">
-        {hasActiveSub ? (
+        {isPro ? (
           <span className="badge-sub active" title="Active Pro Subscription">Pro Active</span>
         ) : subscription?.status === "cancelled" ? (
           <span className="badge-sub cancelled" title="Cancelled subscription">Cancelled</span>
+        ) : (credits ?? 0) === 0 ? (
+          <span className="badge-sub empty" title="0 free credits left · Upgrade to Pro or purchase credits">0 Credits</span>
         ) : (
-          <span className="badge-sub free" title="Free standard tier">Standard</span>
+          <span className="badge-sub free" title="Free standard account">Free Account</span>
         )}
       </div>
     </div>

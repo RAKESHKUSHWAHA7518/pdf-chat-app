@@ -40,19 +40,52 @@ export async function signup(email, password) {
     _id: id,
     email: normalizedEmail,
     passwordHash: hashPassword(password),
+    credits: 3, // 3 free credits upon signup
+    subscription: { status: "inactive" },
     createdAt: new Date(),
   });
 
-  return { token: signToken(id), user: { id, email: normalizedEmail } };
+  await collections.creditTransactions().insertOne({
+    _id: crypto.randomUUID(),
+    userId: id,
+    amount: 3,
+    type: "welcome_bonus",
+    description: "Welcome bonus: 3 free document credits",
+    balanceAfter: 3,
+    createdAt: new Date(),
+  });
+
+  return {
+    token: signToken(id),
+    user: { id, email: normalizedEmail, isPro: false, plan: "free", credits: 3 },
+  };
 }
 
 export async function login(email, password) {
-  const user = await collections.users().findOne({ email: email.toLowerCase() });
+  let user = await collections.users().findOne({ email: email.toLowerCase() });
   // Same error for unknown email and wrong password — don't leak which is which
   if (!user || !verifyPassword(password, user.passwordHash)) {
     throw new ApiError(401, "INVALID_CREDENTIALS", "Invalid email or password");
   }
-  return { token: signToken(user._id), user: { id: user._id, email: user.email } };
+  if (user.credits === undefined) {
+    await collections.users().updateOne({ _id: user._id }, { $set: { credits: 3 } });
+    user.credits = 3;
+  }
+  const isPro = Boolean(
+    user?.subscription?.status === "active" &&
+    user?.subscription?.currentPeriodEnd &&
+    new Date(user.subscription.currentPeriodEnd) > new Date()
+  );
+  return {
+    token: signToken(user._id),
+    user: {
+      id: user._id,
+      email: user.email,
+      isPro,
+      plan: isPro ? (user?.subscription?.planId || "pro_monthly") : "free",
+      credits: user.credits,
+    },
+  };
 }
 
 export function verifyToken(token) {
@@ -65,8 +98,23 @@ export function verifyToken(token) {
 }
 
 export async function getUserById(id) {
-  return collections.users().findOne(
+  let user = await collections.users().findOne(
     { _id: id },
-    { projection: { _id: 1, email: 1, createdAt: 1 } }
+    { projection: { _id: 1, email: 1, credits: 1, subscription: 1, createdAt: 1 } }
   );
+  if (!user) return null;
+  if (user.credits === undefined) {
+    await collections.users().updateOne({ _id: id }, { $set: { credits: 3 } });
+    user.credits = 3;
+  }
+  const isPro = Boolean(
+    user?.subscription?.status === "active" &&
+    user?.subscription?.currentPeriodEnd &&
+    new Date(user.subscription.currentPeriodEnd) > new Date()
+  );
+  return {
+    ...user,
+    isPro,
+    plan: isPro ? (user?.subscription?.planId || "pro_monthly") : "free",
+  };
 }

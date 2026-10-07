@@ -13,11 +13,11 @@ const tiers = [
     period: "forever",
     description: "Ideal for trying out vector search on personal PDFs.",
     features: [
-      "Up to 3 PDF uploads per day",
+      "1 free credit without login (guest)",
+      "3 free document credits upon signup",
       "Maximum 25 pages per document",
       "Fast Gemini streaming answers",
       "Page-level source citations",
-      "7-day session history",
     ],
     cta: "Start Free",
     link: "/app",

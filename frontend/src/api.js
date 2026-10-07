@@ -64,6 +64,7 @@ async function callAuth(path, body) {
 
 export const signup = (email, password) => callAuth("/signup", { email, password });
 export const login = (email, password) => callAuth("/login", { email, password });
+export const getAuthMe = (auth) => callApi("/auth/me", auth).then((d) => d);
 
 // ── Document library (signed-in users) ──
 function httpError(status, message) {

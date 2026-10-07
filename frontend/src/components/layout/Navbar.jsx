@@ -58,8 +58,8 @@ export function Navbar() {
 
   // --- Marketing Floating Island Navbar ---
   return (
-    <header className="sticky top-3 z-40 w-full px-4 sm:px-6">
-      <div className="navbar-island">
+    <header className="sticky top-3 z-40 w-full px-4 sm:px-6 pointer-events-none">
+      <div className="navbar-island pointer-events-auto">
         <div className="flex h-14 items-center justify-between">
           
           {/* Brand Logo */}

@@ -87,7 +87,7 @@ export function SettingsPage() {
             <div className="p-3 rounded-xl bg-slate-900 border border-slate-800">
               <span className="text-slate-500 block mb-1">Current Plan</span>
               <span className="text-xl font-bold text-indigo-400">
-                {balance?.isPro ? "Pro Member" : "Free Tier"}
+                {balance?.isPro ? (balance?.planLabel || "Pro Member") : "Free Account"}
               </span>
             </div>
             <div className="p-3 rounded-xl bg-slate-900 border border-slate-800">
