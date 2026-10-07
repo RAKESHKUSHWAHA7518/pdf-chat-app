@@ -1,6 +1,7 @@
-import { createBrowserRouter } from "react-router-dom";
+import { createBrowserRouter, Navigate } from "react-router-dom";
 import { AuthProvider } from "../hooks/useAuth.jsx";
 import { PublicLayout, AuthLayout, AppLayout } from "../components/layout/PageLayout";
+import { DashboardLayout } from "../components/layout/DashboardLayout";
 import { LandingPage } from "../pages/LandingPage";
 import { LoginPage } from "../pages/LoginPage";
 import { SignupPage } from "../pages/SignupPage";
@@ -8,6 +9,8 @@ import { PricingPage } from "../pages/PricingPage";
 import { DocsPage } from "../pages/DocsPage";
 import { DocumentsPage } from "../pages/DocumentsPage";
 import { SettingsPage } from "../pages/SettingsPage";
+import { GithubStudio } from "../pages/GithubStudio";
+import { ResumeToReadme } from "../pages/ResumeToReadme";
 import App from "../App.jsx";
 
 export const router = createBrowserRouter([
@@ -71,15 +74,41 @@ export const router = createBrowserRouter([
   },
   {
     path: "/app",
+    element: <Navigate to="/dashboard/chat-pdf" replace />,
+  },
+  {
+    path: "/app/documents",
+    element: <Navigate to="/dashboard/documents" replace />,
+  },
+  {
+    path: "/app/settings",
+    element: <Navigate to="/dashboard/settings" replace />,
+  },
+  {
+    path: "/dashboard",
     element: (
       <AuthProvider>
-        <AppLayout />
+        <DashboardLayout />
       </AuthProvider>
     ),
     children: [
-      { index: true, element: <App /> },
+      { index: true, element: <Navigate to="/dashboard/github-studio" replace /> },
+      { path: "github-studio", element: <GithubStudio /> },
+      { path: "resume-to-readme", element: <ResumeToReadme /> },
+      { path: "chat-pdf", element: <App /> },
       { path: "documents", element: <DocumentsPage /> },
       { path: "settings", element: <SettingsPage /> },
+    ],
+  },
+  {
+    path: "/settings",
+    element: (
+      <AuthProvider>
+        <PublicLayout />
+      </AuthProvider>
+    ),
+    children: [
+      { index: true, element: <SettingsPage /> },
     ],
   },
 ]);

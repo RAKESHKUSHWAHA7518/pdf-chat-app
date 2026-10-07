@@ -193,7 +193,7 @@ async function activateSubscription(userId, planId, razorpaySubscriptionId) {
   logger.info({ userId, planId, periodEnd }, "Subscription activated");
 }
 
-export async function deductCredit(userId, sessionId) {
+export async function deductCredit(userId, sessionId, description = "PDF upload / chat session") {
   let user = await collections.users().findOne({ _id: userId });
   if (!user) throw new ApiError(404, "USER_NOT_FOUND", "User not found");
 
@@ -228,7 +228,7 @@ export async function deductCredit(userId, sessionId) {
     amount: -1,
     type: "usage",
     referenceId: sessionId,
-    description: "PDF upload / chat session",
+    description,
     balanceAfter: updated.credits,
     createdAt: new Date(),
   });

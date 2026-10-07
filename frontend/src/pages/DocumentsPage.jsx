@@ -51,11 +51,11 @@ export function DocumentsPage() {
   );
 
   return (
-    <div className="py-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+    <div className="flex-1 h-full overflow-y-auto py-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 w-full">
       {/* Top Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
         <div>
-          <Link to="/app" className="inline-flex items-center gap-1.5 text-xs text-indigo-400 hover:text-indigo-300 mb-2">
+          <Link to="/dashboard/chat-pdf" className="inline-flex items-center gap-1.5 text-xs text-indigo-400 hover:text-indigo-300 mb-2">
             <ArrowLeft className="w-3.5 h-3.5" /> Back to Chat Workspace
           </Link>
           <h1 className="text-3xl font-extrabold text-white tracking-tight">
@@ -66,7 +66,7 @@ export function DocumentsPage() {
           </p>
         </div>
 
-        <Link to="/app">
+        <Link to="/dashboard/chat-pdf">
           <Button size="md" variant="primary">
             <Upload className="w-4 h-4 mr-2" /> Upload New PDF
           </Button>
@@ -100,7 +100,7 @@ export function DocumentsPage() {
           <p className="text-xs text-slate-400 mb-5">
             {search ? "No documents match your search query." : "Upload your first PDF to begin chatting."}
           </p>
-          <Link to="/app">
+          <Link to="/dashboard/chat-pdf">
             <Button size="sm" variant="primary">
               Open Chat Workspace
             </Button>
@@ -111,7 +111,7 @@ export function DocumentsPage() {
           {filteredDocs.map((doc) => (
             <InteractiveCard
               key={doc.sessionId}
-              onClick={() => navigate(`/app?session=${doc.sessionId}`)}
+              onClick={() => navigate(`/dashboard/chat-pdf?session=${doc.sessionId}`)}
               className="p-5 flex flex-col justify-between hover:border-indigo-500/50"
             >
               <div>

@@ -159,7 +159,7 @@ export function PricingPage({ auth: propAuth, onClose } = {}) {
   });
 
   const mainContent = (
-    <div className={`max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10 ${onClose ? "pt-6 pb-20" : "pt-28 pb-20 sm:pt-36 sm:pb-24"}`}>
+    <div className={`max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10 ${onClose ? "pt-6 pb-20" : "pt-28 pb-20 sm:pt-36 sm:pb-24"}`}>
       {onClose && (
         <div className="flex justify-between items-center mb-6 pb-4 border-b border-white/10">
           <div className="flex items-center gap-2">
@@ -200,11 +200,10 @@ export function PricingPage({ auth: propAuth, onClose } = {}) {
           <button
             type="button"
             onClick={() => setTab("subscription")}
-            className={`px-6 py-2.5 rounded-xl text-sm font-semibold transition-all duration-200 flex items-center gap-2 ${
-              tab === "subscription"
-                ? "bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 text-white shadow-lg shadow-indigo-500/30"
-                : "text-slate-400 hover:text-white"
-            }`}
+            className={`px-6 py-2.5 rounded-xl text-sm font-semibold transition-all duration-200 flex items-center gap-2 ${tab === "subscription"
+              ? "bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 text-white shadow-lg shadow-indigo-500/30"
+              : "text-slate-400 hover:text-white"
+              }`}
           >
             <Zap className="w-4 h-4" />
             <span>Pro Subscriptions</span>
@@ -212,11 +211,10 @@ export function PricingPage({ auth: propAuth, onClose } = {}) {
           <button
             type="button"
             onClick={() => setTab("credits")}
-            className={`px-6 py-2.5 rounded-xl text-sm font-semibold transition-all duration-200 flex items-center gap-2 ${
-              tab === "credits"
-                ? "bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 text-white shadow-lg shadow-indigo-500/30"
-                : "text-slate-400 hover:text-white"
-            }`}
+            className={`px-6 py-2.5 rounded-xl text-sm font-semibold transition-all duration-200 flex items-center gap-2 ${tab === "credits"
+              ? "bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 text-white shadow-lg shadow-indigo-500/30"
+              : "text-slate-400 hover:text-white"
+              }`}
           >
             <Sparkles className="w-4 h-4" />
             <span>Pay-As-You-Go Credits</span>
@@ -233,11 +231,10 @@ export function PricingPage({ auth: propAuth, onClose } = {}) {
             return (
               <div
                 key={plan.planId}
-                className={`rounded-3xl p-8 sm:p-9 flex flex-col justify-between transition-all duration-300 relative group backdrop-blur-2xl ${
-                  isYearly
-                    ? "bg-gradient-to-b from-indigo-950/45 via-slate-900/90 to-slate-950/95 border-2 border-indigo-500/80 shadow-[0_0_50px_rgba(99,102,241,0.22)] hover:shadow-[0_0_70px_rgba(99,102,241,0.35)] hover:-translate-y-1"
-                    : "bg-slate-900/80 border border-slate-800 hover:border-slate-700/80 shadow-xl shadow-black/40 hover:shadow-2xl hover:-translate-y-1"
-                }`}
+                className={`rounded-3xl p-8 sm:p-9 flex flex-col justify-between transition-all duration-300 relative group backdrop-blur-2xl ${isYearly
+                  ? "bg-gradient-to-b from-indigo-950/45 via-slate-900/90 to-slate-950/95 border-2 border-indigo-500/80 shadow-[0_0_50px_rgba(99,102,241,0.22)] hover:shadow-[0_0_70px_rgba(99,102,241,0.35)] hover:-translate-y-1"
+                  : "bg-slate-900/80 border border-slate-800 hover:border-slate-700/80 shadow-xl shadow-black/40 hover:shadow-2xl hover:-translate-y-1"
+                  }`}
               >
                 {/* Popular Top Badge */}
                 {isYearly && (
@@ -251,11 +248,10 @@ export function PricingPage({ auth: propAuth, onClose } = {}) {
 
                 {/* Subtle top edge gradient reflection */}
                 <div
-                  className={`absolute inset-x-0 top-0 h-px ${
-                    isYearly
-                      ? "bg-gradient-to-r from-transparent via-indigo-400 to-transparent"
-                      : "bg-gradient-to-r from-transparent via-slate-700 to-transparent"
-                  }`}
+                  className={`absolute inset-x-0 top-0 h-px ${isYearly
+                    ? "bg-gradient-to-r from-transparent via-indigo-400 to-transparent"
+                    : "bg-gradient-to-r from-transparent via-slate-700 to-transparent"
+                    }`}
                 />
 
                 <div>
@@ -276,11 +272,10 @@ export function PricingPage({ auth: propAuth, onClose } = {}) {
 
                   <div className="flex items-baseline gap-2 mb-1">
                     <span
-                      className={`text-4xl sm:text-5xl font-extrabold tracking-tight ${
-                        isYearly
-                          ? "text-transparent bg-clip-text bg-gradient-to-r from-white via-indigo-100 to-purple-200"
-                          : "text-white"
-                      }`}
+                      className={`text-4xl sm:text-5xl font-extrabold tracking-tight ${isYearly
+                        ? "text-transparent bg-clip-text bg-gradient-to-r from-white via-indigo-100 to-purple-200"
+                        : "text-white"
+                        }`}
                     >
                       {plan.price}
                     </span>
@@ -311,11 +306,10 @@ export function PricingPage({ auth: propAuth, onClose } = {}) {
                     <button
                       type="button"
                       onClick={() => setPaymentModal({ type: "subscription", item: plan })}
-                      className={`w-full py-3.5 px-6 rounded-xl font-semibold text-sm transition-all flex items-center justify-center gap-2 active:scale-[0.98] ${
-                        isYearly
-                          ? "bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 hover:from-indigo-500 hover:via-purple-500 hover:to-pink-500 text-white shadow-lg shadow-indigo-500/35 hover:shadow-indigo-500/50"
-                          : "bg-slate-800 hover:bg-slate-700 text-white border border-slate-700/80 shadow-md hover:shadow-lg"
-                      }`}
+                      className={`w-full py-3.5 px-6 rounded-xl font-semibold text-sm transition-all flex items-center justify-center gap-2 active:scale-[0.98] ${isYearly
+                        ? "bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 hover:from-indigo-500 hover:via-purple-500 hover:to-pink-500 text-white shadow-lg shadow-indigo-500/35 hover:shadow-indigo-500/50"
+                        : "bg-slate-800 hover:bg-slate-700 text-white border border-slate-700/80 shadow-md hover:shadow-lg"
+                        }`}
                     >
                       <span>Subscribe to {plan.label}</span>
                       <ArrowRight className="w-4 h-4" />
@@ -324,11 +318,10 @@ export function PricingPage({ auth: propAuth, onClose } = {}) {
                     <Link to="/signup" className="block">
                       <button
                         type="button"
-                        className={`w-full py-3.5 px-6 rounded-xl font-semibold text-sm transition-all flex items-center justify-center gap-2 active:scale-[0.98] ${
-                          isYearly
-                            ? "bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 hover:from-indigo-500 hover:via-purple-500 hover:to-pink-500 text-white shadow-lg shadow-indigo-500/35 hover:shadow-indigo-500/50"
-                            : "bg-slate-800 hover:bg-slate-700 text-white border border-slate-700/80 shadow-md hover:shadow-lg"
-                        }`}
+                        className={`w-full py-3.5 px-6 rounded-xl font-semibold text-sm transition-all flex items-center justify-center gap-2 active:scale-[0.98] ${isYearly
+                          ? "bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 hover:from-indigo-500 hover:via-purple-500 hover:to-pink-500 text-white shadow-lg shadow-indigo-500/35 hover:shadow-indigo-500/50"
+                          : "bg-slate-800 hover:bg-slate-700 text-white border border-slate-700/80 shadow-md hover:shadow-lg"
+                          }`}
                       >
                         <span>Sign In to Subscribe</span>
                         <ArrowRight className="w-4 h-4" />
@@ -349,11 +342,10 @@ export function PricingPage({ auth: propAuth, onClose } = {}) {
             return (
               <div
                 key={pack.packId || pack.credits}
-                className={`rounded-3xl p-7 flex flex-col justify-between transition-all duration-300 relative group backdrop-blur-2xl ${
-                  isPopular
-                    ? "bg-gradient-to-b from-indigo-950/40 via-slate-900/90 to-slate-950/95 border-2 border-indigo-500/80 shadow-[0_0_40px_rgba(99,102,241,0.2)] hover:shadow-[0_0_60px_rgba(99,102,241,0.3)] hover:-translate-y-1"
-                    : "bg-slate-900/80 border border-slate-800 hover:border-slate-700/80 shadow-xl shadow-black/40 hover:shadow-2xl hover:-translate-y-1"
-                }`}
+                className={`rounded-3xl p-7 flex flex-col justify-between transition-all duration-300 relative group backdrop-blur-2xl ${isPopular
+                  ? "bg-gradient-to-b from-indigo-950/40 via-slate-900/90 to-slate-950/95 border-2 border-indigo-500/80 shadow-[0_0_40px_rgba(99,102,241,0.2)] hover:shadow-[0_0_60px_rgba(99,102,241,0.3)] hover:-translate-y-1"
+                  : "bg-slate-900/80 border border-slate-800 hover:border-slate-700/80 shadow-xl shadow-black/40 hover:shadow-2xl hover:-translate-y-1"
+                  }`}
               >
                 {isPopular && (
                   <div className="absolute -top-3.5 left-1/2 -translate-x-1/2 z-20">
@@ -395,11 +387,10 @@ export function PricingPage({ auth: propAuth, onClose } = {}) {
                     <button
                       type="button"
                       onClick={() => setPaymentModal({ type: "credits", item: pack })}
-                      className={`w-full py-3 px-5 rounded-xl font-semibold text-xs transition-all flex items-center justify-center gap-2 active:scale-[0.98] ${
-                        isPopular
-                          ? "bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white shadow-md shadow-indigo-500/30"
-                          : "bg-slate-800 hover:bg-slate-700 text-white border border-slate-700/80"
-                      }`}
+                      className={`w-full py-3 px-5 rounded-xl font-semibold text-xs transition-all flex items-center justify-center gap-2 active:scale-[0.98] ${isPopular
+                        ? "bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white shadow-md shadow-indigo-500/30"
+                        : "bg-slate-800 hover:bg-slate-700 text-white border border-slate-700/80"
+                        }`}
                     >
                       <span>Buy {pack.credits} Credits</span>
                       <ArrowRight className="w-3.5 h-3.5" />
@@ -408,11 +399,10 @@ export function PricingPage({ auth: propAuth, onClose } = {}) {
                     <Link to="/signup" className="block">
                       <button
                         type="button"
-                        className={`w-full py-3 px-5 rounded-xl font-semibold text-xs transition-all flex items-center justify-center gap-2 active:scale-[0.98] ${
-                          isPopular
-                            ? "bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white shadow-md shadow-indigo-500/30"
-                            : "bg-slate-800 hover:bg-slate-700 text-white border border-slate-700/80"
-                        }`}
+                        className={`w-full py-3 px-5 rounded-xl font-semibold text-xs transition-all flex items-center justify-center gap-2 active:scale-[0.98] ${isPopular
+                          ? "bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white shadow-md shadow-indigo-500/30"
+                          : "bg-slate-800 hover:bg-slate-700 text-white border border-slate-700/80"
+                          }`}
                       >
                         <span>Sign In to Buy</span>
                         <ArrowRight className="w-3.5 h-3.5" />

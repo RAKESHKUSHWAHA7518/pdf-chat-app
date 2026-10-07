@@ -119,7 +119,7 @@ export function LandingPage() {
   const handlePromptSubmit = (e) => {
     e.preventDefault();
     if (mockInput.trim()) {
-      window.location.href = `/app?q=${encodeURIComponent(mockInput)}`;
+      window.location.href = `/dashboard/chat-pdf?q=${encodeURIComponent(mockInput)}`;
     } else {
       window.location.href = "/app";
     }
@@ -1360,3 +1360,4 @@ export function LandingPage() {
     </div>
   );
 }
+

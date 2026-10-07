@@ -13,6 +13,7 @@
     "@langchain/core": "^0.3.58",
     "@langchain/google-genai": "^0.2.14",
     "@langchain/textsplitters": "^0.1.0",
+    "@octokit/rest": "^22.0.1",
     "ai-pdf-chat-app": "file:..",
     "cors": "^2.8.5",
     "dotenv": "^16.0.0",

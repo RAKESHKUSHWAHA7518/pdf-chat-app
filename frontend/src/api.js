@@ -131,3 +131,54 @@ export const getPaymentHistory = (auth) =>
 
 export const getCreditTransactions = (auth) =>
   callApi("/payments/transactions", auth).then((d) => d.transactions);
+
+// ── Career & Resume Intelligence ──
+export async function synthesizeResumeToReadme(auth, { file, sessionId, resumeText }) {
+  let res;
+  if (file) {
+    const formData = new FormData();
+    formData.append("resume", file);
+    res = await fetch(`${API_URL}/career/resume-to-readme`, {
+      method: "POST",
+      headers: authHeaders(auth),
+      body: formData,
+    });
+  } else {
+    res = await fetch(`${API_URL}/career/resume-to-readme`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", ...authHeaders(auth) },
+      body: JSON.stringify({ sessionId, resumeText }),
+    });
+  }
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) {
+    throw httpError(res.status, errorMessage(data, "Failed to synthesize resume"));
+  }
+  return data;
+}
+
+export async function scanResumeAts(auth, { file, sessionId, resumeText, jobDescription }) {
+  let res;
+  if (file) {
+    const formData = new FormData();
+    formData.append("resume", file);
+    formData.append("jobDescription", jobDescription);
+    res = await fetch(`${API_URL}/career/ats-scan`, {
+      method: "POST",
+      headers: authHeaders(auth),
+      body: formData,
+    });
+  } else {
+    res = await fetch(`${API_URL}/career/ats-scan`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", ...authHeaders(auth) },
+      body: JSON.stringify({ sessionId, resumeText, jobDescription }),
+    });
+  }
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) {
+    throw httpError(res.status, errorMessage(data, "Failed to analyze ATS match"));
+  }
+  return data;
+}
+

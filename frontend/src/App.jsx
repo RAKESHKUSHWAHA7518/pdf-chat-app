@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect, useCallback } from "react";
-import { Link, useSearchParams } from "react-router-dom";
+import { Link, useSearchParams, useLocation } from "react-router-dom";
 import ReactMarkdown from "react-markdown";
 import {
   Home,
@@ -21,7 +21,9 @@ import {
   X,
   Zap,
   LogOut,
+  FileCode,
 } from "lucide-react";
+import { Github } from "./components/icons/Github.jsx";
 import AuthModal from "./components/AuthModal.jsx";
 import CreditBalance from "./components/CreditBalance.jsx";
 import PricingPage from "./components/PricingPage.jsx";
@@ -86,6 +88,8 @@ export default function App() {
   const [isDragOver, setIsDragOver] = useState(false);
   const [error, setError] = useState(null);
   const [searchParams] = useSearchParams();
+  const location = useLocation();
+  const isDashboard = location.pathname.startsWith("/dashboard");
   const [auth, setAuth] = useState(() => {
     const stored = getStoredAuth();
     if (stored) return stored;
@@ -522,7 +526,7 @@ export default function App() {
   };
 
   return (
-    <div className={`app ${isSidebarCollapsed ? "sidebar-collapsed" : ""}`}>
+    <div className={`app ${isDashboard ? "in-dashboard" : ""} ${isSidebarCollapsed ? "sidebar-collapsed" : ""}`}>
       {/* Mobile sidebar overlay backdrop */}
       {isMobileSidebarOpen && (
         <div
@@ -532,122 +536,189 @@ export default function App() {
         />
       )}
 
-      {/* ── Sidebar ── */}
-      <aside className={`sidebar ${isSidebarCollapsed ? "collapsed" : ""} ${isMobileSidebarOpen ? "mobile-open" : ""}`}>
-        {/* Top Navigation Strip */}
-        <div className="sidebar-top-nav">
-          {!isSidebarCollapsed && (
-            <Link to="/" className="sidebar-home-link" onClick={() => setIsMobileSidebarOpen(false)}>
-              <Home style={{ width: "13px", height: "13px" }} />
-              <span>Home</span>
-            </Link>
-          )}
-          <div className="sidebar-nav-actions">
-            {!isSidebarCollapsed && (
-              <>
-                <Link to="/app/documents" title="Document Vault" className="sidebar-pill-btn" onClick={() => setIsMobileSidebarOpen(false)}>
-                  <FolderOpen style={{ width: "12px", height: "12px" }} />
-                  <span>Library</span>
-                </Link>
-                <Link to="/app/settings" title="Settings" className="sidebar-icon-btn" onClick={() => setIsMobileSidebarOpen(false)}>
-                  <SettingsIcon style={{ width: "13px", height: "13px" }} />
-                </Link>
-              </>
-            )}
-            <button
-              type="button"
-              className="sidebar-collapse-toggle desktop-only"
-              onClick={() => setIsSidebarCollapsed((prev) => !prev)}
-              title={isSidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"}
-            >
-              {isSidebarCollapsed ? <PanelLeftOpen size={16} /> : <PanelLeftClose size={16} />}
-            </button>
-            <button
-              type="button"
-              className="sidebar-mobile-close-btn"
-              onClick={() => setIsMobileSidebarOpen(false)}
-              title="Close sidebar"
-              aria-label="Close sidebar"
-            >
-              <X size={18} />
-            </button>
-          </div>
-        </div>
+      {/* ── Sidebar (Document Drawer inside Dashboard) ── */}
+      <aside className={`sidebar ${isDashboard ? "doc-drawer" : ""} ${isSidebarCollapsed ? "collapsed" : ""} ${isMobileSidebarOpen ? "mobile-open" : ""}`}>
+        {/* Persistent file input available in all drawer states */}
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept=".pdf"
+          onChange={onFileChange}
+          style={{ display: "none" }}
+        />
 
-        {!isSidebarCollapsed && (
-          <>
-            <div className="sidebar-logo">
-              <div className="logo-icon">📄</div>
-              <div>
-                <h1>PDF Chat</h1>
-                <span>Powered by Gemini AI</span>
+        {isDashboard ? (
+          /* Sleek In-Dashboard Document Drawer Header */
+          <div className="doc-drawer-header">
+            <div className="doc-drawer-title">
+              <div className="doc-drawer-icon">
+                <FileText size={14} className="text-indigo-400" />
               </div>
-            </div>
-
-            {/* Account / free-trial status */}
-            <div className="auth-section">
-              {auth ? (
-                <div className="auth-user-card">
-                  <div className="auth-user-header">
-                    <div className="auth-avatar">{auth.email[0].toUpperCase()}</div>
-                    <div className="auth-user-meta">
-                      <p className="auth-email" title={auth.email}>{auth.email}</p>
-                      {creditBalance?.isPro ? (
-                        <span className="auth-plan-badge pro" title="Active Pro Subscription">
-                          <Sparkles size={11} className="auth-plan-sparkle" /> Pro Member
-                        </span>
-                      ) : (
-                        <span className="auth-plan-badge free" title="Free Account">
-                          Free Account
-                        </span>
-                      )}
-                    </div>
-                  </div>
-
-                  <div className="auth-balance-box">
-                    <CreditBalance
-                      auth={auth}
-                      onBalanceChange={setCreditBalance}
-                      refreshTrigger={balanceRefreshTrigger}
-                    />
-                  </div>
-
-                  <div className="auth-user-actions">
-                    <button
-                      type="button"
-                      className="auth-pricing-btn"
-                      onClick={() => setShowPricing(true)}
-                      title="Manage Plan & Credits"
-                    >
-                      <Zap size={13} />
-                      <span>Manage Plan</span>
-                    </button>
-                    <button
-                      type="button"
-                      className="auth-logout-btn"
-                      onClick={handleLogout}
-                      title="Log out"
-                    >
-                      <LogOut size={13} />
-                      <span>Log out</span>
-                    </button>
-                  </div>
-                </div>
-              ) : (
-                <div className="auth-guest">
-                  <div className="auth-trial-badge">
-                    🎁 Free trial · {guestQuota ? `${guestQuota.remaining}/${guestQuota.limit} free credit left` : "1 free credit"}
-                  </div>
-                  <button className="auth-signup-btn" onClick={() => setShowAuthModal(true)}>
-                    Sign up to claim 3 free credits
-                  </button>
+              {!isSidebarCollapsed && (
+                <div className="doc-drawer-meta">
+                  <span className="doc-drawer-heading">Document Source</span>
+                  <span className="doc-drawer-sub">
+                    {session ? `${session.pageCount} pages indexed` : "PDF Workspace"}
+                  </span>
                 </div>
               )}
             </div>
+            <div className="flex items-center gap-1">
+              <button
+                type="button"
+                className="doc-drawer-collapse-btn desktop-only"
+                onClick={() => setIsSidebarCollapsed((prev) => !prev)}
+                title={isSidebarCollapsed ? "Expand document panel" : "Collapse document panel"}
+              >
+                {isSidebarCollapsed ? <PanelLeftOpen size={14} /> : <PanelLeftClose size={14} />}
+              </button>
+              <button
+                type="button"
+                className="sidebar-mobile-close-btn"
+                onClick={() => setIsMobileSidebarOpen(false)}
+                title="Close drawer"
+                aria-label="Close drawer"
+              >
+                <X size={16} />
+              </button>
+            </div>
+          </div>
+        ) : (
+          /* Legacy Standalone Nav */
+          <div className="sidebar-top-nav">
+            {!isSidebarCollapsed && (
+              <Link to="/" className="sidebar-home-link" onClick={() => setIsMobileSidebarOpen(false)}>
+                <Home style={{ width: "13px", height: "13px" }} />
+                <span>Home</span>
+              </Link>
+            )}
+            <div className="sidebar-nav-actions">
+              {!isSidebarCollapsed && (
+                <>
+                  <Link to="/dashboard/documents" title="Document Vault" className="sidebar-pill-btn" onClick={() => setIsMobileSidebarOpen(false)}>
+                    <FolderOpen style={{ width: "12px", height: "12px" }} />
+                    <span>Library</span>
+                  </Link>
+                  <Link to="/dashboard/github-studio" title="GitHub README Studio" className="sidebar-pill-btn" onClick={() => setIsMobileSidebarOpen(false)}>
+                    <Github style={{ width: "12px", height: "12px" }} />
+                    <span>Studio</span>
+                  </Link>
+                  <Link to="/dashboard/settings" title="Settings" className="sidebar-icon-btn" onClick={() => setIsMobileSidebarOpen(false)}>
+                    <SettingsIcon style={{ width: "13px", height: "13px" }} />
+                  </Link>
+                </>
+              )}
+              <button
+                type="button"
+                className="sidebar-collapse-toggle desktop-only"
+                onClick={() => setIsSidebarCollapsed((prev) => !prev)}
+                title={isSidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"}
+              >
+                {isSidebarCollapsed ? <PanelLeftOpen size={16} /> : <PanelLeftClose size={16} />}
+              </button>
+              <button
+                type="button"
+                className="sidebar-mobile-close-btn"
+                onClick={() => setIsMobileSidebarOpen(false)}
+                title="Close sidebar"
+                aria-label="Close sidebar"
+              >
+                <X size={18} />
+              </button>
+            </div>
+          </div>
+        )}
+
+        {!isSidebarCollapsed && (
+          <>
+            {!isDashboard && (
+              <>
+                <div className="sidebar-logo">
+                  <div className="logo-icon">📄</div>
+                  <div>
+                    <h1>PDF Chat</h1>
+                    <span>Powered by Gemini AI</span>
+                  </div>
+                </div>
+
+                {/* Account / free-trial status */}
+                <div className="auth-section">
+                  {auth ? (
+                    <div className="auth-user-card">
+                      <div className="auth-user-header">
+                        <div className="auth-avatar">{auth.email[0].toUpperCase()}</div>
+                        <div className="auth-user-meta">
+                          <p className="auth-email" title={auth.email}>{auth.email}</p>
+                          {creditBalance?.isPro ? (
+                            <span className="auth-plan-badge pro" title="Active Pro Subscription">
+                              <Sparkles size={11} className="auth-plan-sparkle" /> Pro Member
+                            </span>
+                          ) : (
+                            <span className="auth-plan-badge free" title="Free Account">
+                              Free Account
+                            </span>
+                          )}
+                        </div>
+                      </div>
+
+                      <div className="auth-balance-box">
+                        <CreditBalance
+                          auth={auth}
+                          onBalanceChange={setCreditBalance}
+                          refreshTrigger={balanceRefreshTrigger}
+                        />
+                      </div>
+
+                      <div className="auth-user-actions">
+                        <button
+                          type="button"
+                          className="auth-pricing-btn"
+                          onClick={() => setShowPricing(true)}
+                          title="Manage Plan & Credits"
+                        >
+                          <Zap size={13} />
+                          <span>Manage Plan</span>
+                        </button>
+                        <button
+                          type="button"
+                          className="auth-logout-btn"
+                          onClick={handleLogout}
+                          title="Log out"
+                        >
+                          <LogOut size={13} />
+                          <span>Log out</span>
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="auth-guest">
+                      <div className="auth-trial-badge">
+                        🎁 Free trial · {guestQuota ? `${guestQuota.remaining}/${guestQuota.limit} free credit left` : "1 free credit"}
+                      </div>
+                      <button className="auth-signup-btn" onClick={() => setShowAuthModal(true)}>
+                        Sign up to claim 3 free credits
+                      </button>
+                    </div>
+                  )}
+                </div>
+              </>
+            )}
 
             {/* Upload section */}
             <div className="upload-section">
-              <h2>Document</h2>
+              <div className="flex items-center justify-between mb-1.5">
+                <h2>{session ? "Active PDF" : "Document"}</h2>
+                {session && (
+                  <button
+                    type="button"
+                    onClick={resetSession}
+                    className="text-[11px] text-indigo-400 hover:text-indigo-300 font-medium"
+                    title="Change PDF"
+                  >
+                    Change PDF
+                  </button>
+                )}
+              </div>
 
               {isUploading ? (
                 <div className="upload-progress">
@@ -663,8 +734,8 @@ export default function App() {
                 <div className="pdf-info">
                   <div className="pdf-info-header">
                     <div className="pdf-icon">📕</div>
-                    <div>
-                      <h3>{session.fileName}</h3>
+                    <div className="overflow-hidden">
+                      <h3 className="truncate" title={session.fileName}>{session.fileName}</h3>
                       <p>Ready to chat</p>
                     </div>
                   </div>
@@ -706,9 +777,14 @@ export default function App() {
             {/* Saved documents (signed-in users) */}
             {auth && documents.length > 0 && (
               <div className="documents-section">
-                <h2>My Documents</h2>
+                <div className="flex items-center justify-between mb-2">
+                  <h2>Saved in Vault</h2>
+                  <Link to="/dashboard/documents" className="text-[11px] text-indigo-400 hover:text-indigo-300 font-semibold">
+                    View All ({documents.length}) →
+                  </Link>
+                </div>
                 <div className="documents-list">
-                  {documents.map((doc) => (
+                  {documents.slice(0, 5).map((doc) => (
                     <div
                       key={doc.sessionId}
                       className={`document-item ${session?.sessionId === doc.sessionId ? "active" : ""}`}
@@ -720,7 +796,7 @@ export default function App() {
                       >
                         <span className="document-icon">📕</span>
                         <span className="document-info">
-                          <span className="document-name">{doc.fileName}</span>
+                          <span className="document-name truncate">{doc.fileName}</span>
                           <span className="document-meta">
                             {doc.pageCount} pages · {doc.chunkCount} chunks
                           </span>
@@ -739,36 +815,74 @@ export default function App() {
               </div>
             )}
 
-            <div className="sidebar-footer">
-              <p>
-                Built by <strong>Rakesh Kushwaha</strong><br />
-                <span>LangChain.js</span> • <span>Gemini</span> • <span>MongoDB Atlas</span><br />
-                RAG • Embeddings • Vector Search
-              </p>
-            </div>
+            {!isDashboard && (
+              <div className="sidebar-footer">
+                <p>
+                  Built by <strong>Rakesh Kushwaha</strong><br />
+                  <span>LangChain.js</span> • <span>Gemini</span> • <span>MongoDB Atlas</span><br />
+                  RAG • Embeddings • Vector Search
+                </p>
+              </div>
+            )}
           </>
         )}
 
         {isSidebarCollapsed && (
           <div className="sidebar-collapsed-icons">
-            <Link to="/" title="Home" className="collapsed-icon-link">
-              <Home size={18} />
-            </Link>
-            <Link to="/app/documents" title="Library" className="collapsed-icon-link">
-              <FolderOpen size={18} />
-            </Link>
-            <Link to="/app/settings" title="Settings" className="collapsed-icon-link">
-              <SettingsIcon size={18} />
-            </Link>
-            {session && (
-              <button
-                type="button"
-                className="collapsed-icon-link active"
-                title={session.fileName}
-                onClick={() => setViewMode((m) => (m === "doc" ? "chat" : "doc"))}
-              >
-                <FileText size={18} />
-              </button>
+            {isDashboard ? (
+              <>
+                <button
+                  type="button"
+                  className="collapsed-icon-link"
+                  onClick={() => setIsSidebarCollapsed(false)}
+                  title="Expand document panel"
+                >
+                  <PanelLeftOpen size={16} />
+                </button>
+                <button
+                  type="button"
+                  className="collapsed-icon-link"
+                  onClick={() => fileInputRef.current?.click()}
+                  title="Upload PDF"
+                >
+                  <UploadCloud size={16} />
+                </button>
+                <Link to="/dashboard/documents" title="Document Vault" className="collapsed-icon-link">
+                  <FolderOpen size={16} />
+                </Link>
+                {session && (
+                  <button
+                    type="button"
+                    className="collapsed-icon-link active"
+                    title={session.fileName}
+                    onClick={() => setViewMode((m) => (m === "doc" ? "chat" : "doc"))}
+                  >
+                    <FileText size={16} />
+                  </button>
+                )}
+              </>
+            ) : (
+              <>
+                <Link to="/" title="Home" className="collapsed-icon-link">
+                  <Home size={18} />
+                </Link>
+                <Link to="/dashboard/documents" title="Library" className="collapsed-icon-link">
+                  <FolderOpen size={18} />
+                </Link>
+                <Link to="/dashboard/settings" title="Settings" className="collapsed-icon-link">
+                  <SettingsIcon size={18} />
+                </Link>
+                {session && (
+                  <button
+                    type="button"
+                    className="collapsed-icon-link active"
+                    title={session.fileName}
+                    onClick={() => setViewMode((m) => (m === "doc" ? "chat" : "doc"))}
+                  >
+                    <FileText size={16} />
+                  </button>
+                )}
+              </>
             )}
           </div>
         )}

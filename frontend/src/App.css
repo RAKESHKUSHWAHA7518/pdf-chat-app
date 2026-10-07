@@ -5,6 +5,124 @@
   background: #0f0f13;
 }
 
+.app.in-dashboard {
+  width: 100%;
+  height: 100%;
+  flex: 1;
+  background: transparent;
+}
+
+.sidebar.doc-drawer {
+  width: 250px;
+  min-width: 250px;
+  background: #0d1117;
+  border-right: 1px solid rgba(255, 255, 255, 0.08);
+  padding: 14px 12px;
+  gap: 14px;
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+
+.sidebar.doc-drawer.collapsed {
+  width: 52px;
+  min-width: 52px;
+  padding: 12px 6px;
+  overflow-y: visible;
+}
+
+.app.in-dashboard .workspace-container {
+  height: 100%;
+}
+
+.doc-drawer-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-bottom: 12px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  width: 100%;
+}
+
+.doc-drawer-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  overflow: hidden;
+}
+
+.doc-drawer-icon {
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  background: rgba(99, 102, 241, 0.15);
+  border: 1px solid rgba(99, 102, 241, 0.3);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.doc-drawer-meta {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.doc-drawer-heading {
+  font-size: 12px;
+  font-weight: 700;
+  color: #fff;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.doc-drawer-sub {
+  font-size: 10px;
+  color: #94a3b8;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.doc-drawer-collapse-btn {
+  padding: 4px;
+  border-radius: 6px;
+  background: transparent;
+  border: 1px solid transparent;
+  color: #94a3b8;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.doc-drawer-collapse-btn:hover {
+  color: #fff;
+  background: rgba(255, 255, 255, 0.06);
+  border-color: rgba(255, 255, 255, 0.1);
+}
+
+.documents-section-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+
+.documents-vault-link {
+  font-size: 11px;
+  color: #818cf8;
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.documents-vault-link:hover {
+  text-decoration: underline;
+  color: #a5b4fc;
+}
+
 /* ── Sidebar ── */
 .sidebar {
   width: 290px;
@@ -1329,7 +1447,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  z-index: 200;
+  z-index: 9999;
   animation: fadeIn 0.2s ease;
 }
 
