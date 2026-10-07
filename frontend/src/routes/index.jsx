@@ -15,11 +15,17 @@ export const router = createBrowserRouter([
     path: "/",
     element: (
       <AuthProvider>
+        <LandingPage />
+      </AuthProvider>
+    ),
+  },
+  {
+    element: (
+      <AuthProvider>
         <PublicLayout />
       </AuthProvider>
     ),
     children: [
-      { index: true, element: <LandingPage /> },
       { path: "pricing", element: <PricingPage /> },
       { path: "docs", element: <DocsPage /> },
       {
