@@ -569,23 +569,25 @@ export function GithubStudio({ initialData = null }) {
   };
 
   return (
-    <div className="flex-1 flex flex-col h-full bg-slate-950 text-slate-100 overflow-hidden">
+    <div className="flex-1 flex flex-col min-w-0 bg-slate-950 text-slate-100 overflow-y-auto lg:overflow-hidden lg:h-full">
       {/* Action Header */}
-      <header className="h-14 px-6 border-b border-slate-800/80 flex items-center justify-between shrink-0 bg-slate-900/60 backdrop-blur-md">
-        <div className="flex items-center gap-3">
-          <Github className="w-5 h-5 text-indigo-400" />
-          <h1 className="text-sm font-bold text-white tracking-tight">GitHub Profile README Studio</h1>
+      <header className="min-h-14 py-2 px-3 sm:px-6 border-b border-slate-800/80 flex flex-wrap items-center justify-between gap-2.5 shrink-0 bg-slate-900/60 backdrop-blur-md">
+        <div className="flex items-center gap-2.5 min-w-0">
+          <Github className="w-5 h-5 text-indigo-400 shrink-0" />
+          <h1 className="text-xs sm:text-sm font-bold text-white tracking-tight truncate">
+            GitHub Profile README Studio
+          </h1>
           {status?.connected && (
-            <span className="hidden sm:inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 text-[10px] font-semibold">
+            <span className="hidden sm:inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 text-[10px] font-semibold shrink-0">
               <CheckCircle2 size={10} /> @{status.githubUsername}
             </span>
           )}
         </div>
-        <div className="flex items-center gap-2.5">
+        <div className="flex flex-wrap items-center gap-2">
           <button
             type="button"
             onClick={handleCopy}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-slate-300 text-xs font-semibold border border-slate-800 transition-all active:scale-95"
+            className="flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-slate-300 text-xs font-semibold border border-slate-800 transition-all active:scale-95 cursor-pointer"
           >
             {copied ? <Check size={13} className="text-emerald-400" /> : <Copy size={13} />}
             <span>{copied ? "Copied!" : "Copy Markdown"}</span>
@@ -594,7 +596,7 @@ export function GithubStudio({ initialData = null }) {
             type="button"
             onClick={handlePublish}
             disabled={isPublishing}
-            className="flex items-center gap-1.5 px-4 py-1.5 rounded-xl bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white text-xs font-bold shadow-lg shadow-indigo-500/25 transition-all active:scale-95 disabled:opacity-50"
+            className="flex items-center gap-1.5 px-3 sm:px-4 py-1.5 rounded-xl bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white text-xs font-bold shadow-lg shadow-indigo-500/25 transition-all active:scale-95 disabled:opacity-50 cursor-pointer"
           >
             {isPublishing ? <Loader2 size={13} className="animate-spin" /> : <Send size={13} />}
             <span>{isPublishing ? "Pushing..." : "Publish to GitHub"}</span>
@@ -603,9 +605,9 @@ export function GithubStudio({ initialData = null }) {
       </header>
 
       {/* Dual Pane Layout */}
-      <div className="flex-1 grid lg:grid-cols-2 divide-y lg:divide-y-0 lg:divide-x divide-slate-800/80 overflow-hidden">
+      <div className="flex-1 flex flex-col lg:flex-row divide-y lg:divide-y-0 lg:divide-x divide-slate-800/80 overflow-y-auto lg:overflow-hidden min-w-0">
         {/* Left Pane: Interactive Builder Form */}
-        <div className="overflow-y-auto p-6 space-y-6">
+        <div className="w-full lg:w-1/2 overflow-y-visible lg:overflow-y-auto p-4 sm:p-6 space-y-5 sm:space-y-6 shrink-0 lg:shrink min-w-0">
           
           {/* ── AI Profile README Architect Box ── */}
           <div className="p-4 rounded-2xl bg-gradient-to-br from-indigo-950/40 via-purple-950/20 to-slate-900 border border-indigo-500/30 space-y-3.5 relative shadow-lg shadow-indigo-500/10">
@@ -1368,8 +1370,8 @@ e.g. 'I am an AI engineer building LLM agents with LangChain, Next.js, and Pytho
         </div>
 
         {/* Right Pane: Live Markdown Preview */}
-        <div className="flex flex-col h-full bg-slate-900/20 overflow-hidden">
-          <div className="h-10 px-4 border-b border-slate-800/80 flex items-center justify-between bg-slate-950/80 shrink-0">
+        <div className="w-full lg:w-1/2 flex flex-col min-h-[500px] lg:min-h-0 lg:h-full bg-slate-900/20 overflow-hidden min-w-0">
+          <div className="min-h-10 py-1.5 px-3 sm:px-4 border-b border-slate-800/80 flex flex-wrap items-center justify-between gap-2 bg-slate-950/80 shrink-0">
             <span className="text-xs font-semibold text-slate-400">Live Preview (`README.md`)</span>
             <div className="flex items-center bg-slate-900 rounded-lg p-0.5 border border-slate-800">
               <button
@@ -1393,7 +1395,7 @@ e.g. 'I am an AI engineer building LLM agents with LangChain, Next.js, and Pytho
             </div>
           </div>
 
-          <div className="flex-1 p-6 overflow-y-auto">
+          <div className="flex-1 p-4 sm:p-6 overflow-y-auto">
             {previewTab === "rendered" ? (
               <div className="readme-markdown-preview prose-headings:font-bold prose-a:text-indigo-400">
                 <ReactMarkdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeRaw]}>

@@ -188,28 +188,30 @@ export function RepoDocsPage() {
   };
 
   return (
-    <div className="flex-1 flex flex-col h-screen overflow-hidden bg-slate-950 text-slate-100">
+    <div className="flex-1 flex flex-col min-w-0 bg-slate-950 text-slate-100 overflow-y-auto lg:overflow-hidden lg:h-full">
       {/* Header */}
-      <header className="h-16 border-b border-slate-800/80 bg-slate-950/80 backdrop-blur-md px-6 flex items-center justify-between shrink-0 z-20">
-        <div className="flex items-center gap-3">
-          <div className="p-2 rounded-xl bg-gradient-to-tr from-cyan-500 via-blue-500 to-indigo-600 text-white shadow-md shadow-blue-500/20">
+      <header className="min-h-14 py-2.5 px-3 sm:px-6 border-b border-slate-800/80 bg-slate-950/80 backdrop-blur-md flex flex-wrap items-center justify-between gap-3 shrink-0 z-20">
+        <div className="flex items-center gap-2.5 sm:gap-3 min-w-0">
+          <div className="p-2 rounded-xl bg-gradient-to-tr from-cyan-500 via-blue-500 to-indigo-600 text-white shadow-md shadow-blue-500/20 shrink-0">
             <BookOpen className="w-5 h-5" />
           </div>
-          <div>
-            <h1 className="text-base font-bold text-white flex items-center gap-2">
-              GitHub Repo to README Studio
-              <span className="text-[10px] px-2 py-0.5 rounded-full bg-cyan-500/20 text-cyan-300 border border-cyan-500/30 font-semibold">
+          <div className="min-w-0">
+            <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
+              <h1 className="text-sm sm:text-base font-bold text-white truncate">
+                GitHub Repo to README Studio
+              </h1>
+              <span className="text-[10px] px-2 py-0.5 rounded-full bg-cyan-500/20 text-cyan-300 border border-cyan-500/30 font-semibold shrink-0">
                 Architecture & Docs
               </span>
-            </h1>
-            <p className="text-xs text-slate-400">
+            </div>
+            <p className="text-[11px] sm:text-xs text-slate-400 line-clamp-1 sm:line-clamp-none">
               Inspect any repository file tree, auto-detect dependencies, and generate complete production documentation
             </p>
           </div>
         </div>
 
         {markdown && (
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             <button
               type="button"
               onClick={handleCopy}
@@ -242,9 +244,9 @@ export function RepoDocsPage() {
       </header>
 
       {/* Main Dual-Pane Workspace */}
-      <div className="flex-1 flex overflow-hidden">
+      <div className="flex-1 flex flex-col lg:flex-row overflow-y-auto lg:overflow-hidden min-w-0">
         {/* Left Pane: Config & Generator Controls */}
-        <div className="w-full lg:w-[460px] xl:w-[500px] border-r border-slate-800/80 flex flex-col bg-slate-900/40 shrink-0 overflow-y-auto p-5 space-y-5">
+        <div className="w-full lg:w-[460px] xl:w-[500px] border-b lg:border-b-0 lg:border-r border-slate-800/80 flex flex-col bg-slate-900/40 shrink-0 overflow-y-visible lg:overflow-y-auto p-4 sm:p-5 space-y-4 sm:space-y-5">
           {error && (
             <div className="p-3.5 rounded-xl bg-rose-500/10 border border-rose-500/30 text-rose-300 text-xs flex items-start gap-2.5">
               <AlertCircle className="w-4 h-4 shrink-0 text-rose-400 mt-0.5" />
@@ -312,7 +314,7 @@ export function RepoDocsPage() {
           {/* Documentation Tone & Style */}
           <div className="space-y-2">
             <label className="text-xs font-bold uppercase tracking-wider text-slate-300">Documentation Tone</label>
-            <div className="grid grid-cols-2 gap-2">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
               {[
                 { id: "professional", label: "Professional & Enterprise" },
                 { id: "open_source", label: "Open Source Viral" },
@@ -377,9 +379,9 @@ export function RepoDocsPage() {
         </div>
 
         {/* Right Pane: Live Render / Markdown Editor */}
-        <div className="flex-1 flex flex-col bg-slate-950 overflow-hidden">
+        <div className="flex-1 flex flex-col bg-slate-950 min-w-0 overflow-y-auto lg:overflow-hidden">
           {/* Subheader Toolbar */}
-          <div className="h-11 border-b border-slate-800/80 bg-slate-900/40 px-4 flex items-center justify-between shrink-0">
+          <div className="min-h-11 py-1.5 px-3 sm:px-4 border-b border-slate-800/80 bg-slate-900/40 flex flex-wrap items-center justify-between gap-2 shrink-0">
             <div className="flex items-center gap-2">
               <button
                 type="button"
@@ -423,7 +425,7 @@ export function RepoDocsPage() {
           </div>
 
           {/* Content Body */}
-          <div className="flex-1 overflow-y-auto p-6">
+          <div className="flex-1 overflow-y-auto p-4 sm:p-6">
             {!markdown && !isGenerating && (
               <div className="h-full flex flex-col items-center justify-center text-center max-w-md mx-auto space-y-4 py-16">
                 <div className="w-16 h-16 rounded-2xl bg-cyan-500/10 border border-cyan-500/20 flex items-center justify-center text-cyan-400 shadow-inner">
