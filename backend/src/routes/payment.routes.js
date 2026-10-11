@@ -3,6 +3,7 @@ import { Router } from "express";
 import { requireAuth } from "../middleware/auth.js";
 import { ApiError } from "../middleware/errorHandler.js";
 import { logger } from "../lib/logger.js";
+import { collections } from "../db/database.js";
 import {
   createCreditsOrder,
   createSubscriptionOrder,
@@ -50,8 +51,8 @@ paymentRouter.post("/credits/order", requireAuth, async (req, res, next) => {
     const { packId } = req.body;
     if (!packId) throw new ApiError(400, "MISSING_PACK_ID", "packId is required");
 
-    const user = await req.app.locals.collections.users().findOne({ _id: req.userId });
-    const order = await createCreditsOrder(req.userId, packId, user.email);
+    const user = await collections.users().findOne({ _id: req.userId });
+    const order = await createCreditsOrder(req.userId, packId, user?.email);
     res.json(order);
   } catch (err) {
     next(err);
@@ -64,8 +65,8 @@ paymentRouter.post("/subscription/order", requireAuth, async (req, res, next) =>
     const { planId } = req.body;
     if (!planId) throw new ApiError(400, "MISSING_PLAN_ID", "planId is required");
 
-    const user = await req.app.locals.collections.users().findOne({ _id: req.userId });
-    const order = await createSubscriptionOrder(req.userId, planId, user.email);
+    const user = await collections.users().findOne({ _id: req.userId });
+    const order = await createSubscriptionOrder(req.userId, planId, user?.email);
     res.json(order);
   } catch (err) {
     next(err);
@@ -75,13 +76,14 @@ paymentRouter.post("/subscription/order", requireAuth, async (req, res, next) =>
 // POST /api/payments/verify — Verify payment after Razorpay checkout (frontend calls this)
 paymentRouter.post("/verify", requireAuth, async (req, res, next) => {
   try {
-    const { razorpay_order_id, razorpay_payment_id, razorpay_signature } = req.body;
-    if (!razorpay_order_id || !razorpay_payment_id || !razorpay_signature) {
-      throw new ApiError(400, "MISSING_FIELDS", "Missing payment verification fields");
+    const { razorpay_order_id, razorpay_subscription_id, razorpay_payment_id, razorpay_signature } = req.body;
+    if ((!razorpay_order_id && !razorpay_subscription_id) || !razorpay_payment_id || !razorpay_signature) {
+      throw new ApiError(400, "MISSING_FIELDS", "Missing payment verification fields (order/subscription ID, payment ID, or signature)");
     }
 
     const result = await verifyPaymentAndGrant(req.userId, {
       razorpay_order_id,
+      razorpay_subscription_id,
       razorpay_payment_id,
       razorpay_signature,
     });

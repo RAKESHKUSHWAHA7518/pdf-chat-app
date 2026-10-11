@@ -9,11 +9,19 @@ export default function PaymentModal({ auth, onClose, onSuccess, type, item, use
   const razorpayLoaded = useRef(false);
 
   useEffect(() => {
+    if (window.Razorpay) {
+      razorpayLoaded.current = true;
+      return;
+    }
     const script = document.createElement("script");
     script.src = "https://checkout.razorpay.com/v1/checkout.js";
     script.onload = () => { razorpayLoaded.current = true; };
     document.body.appendChild(script);
-    return () => document.body.removeChild(script);
+    return () => {
+      if (document.body.contains(script)) {
+        document.body.removeChild(script);
+      }
+    };
   }, []);
 
   const effectiveEmail = userEmail || auth?.email || "customer@pdfchat.ai";
@@ -33,24 +41,25 @@ export default function PaymentModal({ auth, onClose, onSuccess, type, item, use
         : await createSubscriptionOrder(auth, item.planId);
       setOrderData(order);
     } catch (err) {
-      setError(err.message);
+      setError(err.message || "Failed to create payment order");
     } finally {
       setLoading(false);
     }
   };
 
   const openRazorpayCheckout = () => {
-    if (!razorpayLoaded.current || !orderData) return;
-
-    const displayPrice = item.price || (item.amount ? `₹${Math.round(item.amount / 100)}` : "");
+    if (!orderData) return;
+    if (!window.Razorpay) {
+      setError("Payment gateway is initializing. Please click again in 2 seconds.");
+      return;
+    }
 
     const options = {
       key: orderData.key,
-      amount: orderData.amount,
-      currency: orderData.currency,
-      name: "PDF Chat",
-      description: type === "credits" ? `Credit Pack: ${orderData.pack?.label || item.label}` : `Subscription: ${orderData.plan?.label || item.label}`,
-      order_id: orderData.orderId || orderData.subscriptionId,
+      name: "PDF Chat AI",
+      description: type === "credits"
+        ? `Credit Pack: ${orderData.pack?.label || item.label}`
+        : `Pro Access: ${orderData.plan?.label || item.label}`,
       prefill: { email: effectiveEmail },
       theme: { color: "#6366f1" },
       handler: async (response) => {
@@ -58,25 +67,43 @@ export default function PaymentModal({ auth, onClose, onSuccess, type, item, use
         try {
           await verifyPayment(auth, {
             razorpay_order_id: response.razorpay_order_id,
+            razorpay_subscription_id: response.razorpay_subscription_id,
             razorpay_payment_id: response.razorpay_payment_id,
             razorpay_signature: response.razorpay_signature,
           });
           onSuccess?.();
           onClose?.();
         } catch (err) {
-          setError(err.message);
+          setError(err.message || "Payment verification failed");
         } finally {
           setLoading(false);
         }
       },
-      modal: { ondismiss: () => { setLoading(false); } },
+      modal: {
+        ondismiss: () => {
+          setLoading(false);
+        },
+      },
     };
 
-    const rzp = new window.Razorpay(options);
-    rzp.on("payment.failed", (response) => {
-      setError(response.error?.description || "Payment failed");
-    });
-    rzp.open();
+    // Subscriptions use subscription_id without amount or order_id
+    if (orderData.subscriptionId && !orderData.orderId) {
+      options.subscription_id = orderData.subscriptionId;
+    } else {
+      options.order_id = orderData.orderId;
+      options.amount = orderData.amount;
+      options.currency = orderData.currency || "INR";
+    }
+
+    try {
+      const rzp = new window.Razorpay(options);
+      rzp.on("payment.failed", (response) => {
+        setError(response.error?.description || "Payment failed");
+      });
+      rzp.open();
+    } catch (openErr) {
+      setError(openErr.message || "Could not open Razorpay checkout");
+    }
   };
 
   if (loading && !orderData) {

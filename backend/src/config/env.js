@@ -41,10 +41,13 @@ const envSchema = z.object({
   RAZORPAY_KEY_ID: z.string().optional(),
   RAZORPAY_KEY_SECRET: z.string().optional(),
   RAZORPAY_WEBHOOK_SECRET: z.string().optional(),
+  RAZORPAY_PLAN_PRO_MONTHLY: z.string().optional().default("plan_Tl77SFPCromUyx"),
+  RAZORPAY_PLAN_PRO_YEARLY: z.string().optional().default("plan_Tl78c7YHFac2ya"),
   RAZORPAY_CREDITS_PACK_10_AMOUNT: z.coerce.number().int().positive().default(29900),
   RAZORPAY_CREDITS_PACK_50_AMOUNT: z.coerce.number().int().positive().default(129900),
+  RAZORPAY_CREDITS_PACK_100_AMOUNT: z.coerce.number().int().positive().default(229900),
   RAZORPAY_PRO_MONTHLY_AMOUNT: z.coerce.number().int().positive().default(29900),
-  RAZORPAY_PRO_YEARLY_AMOUNT: z.coerce.number().int().positive().default(299000),
+  RAZORPAY_PRO_YEARLY_AMOUNT: z.coerce.number().int().positive().default(299900),
 
   // GitHub OAuth (optional)
   GITHUB_CLIENT_ID: z.string().optional(),
