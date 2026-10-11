@@ -136,7 +136,7 @@ export function LandingPage() {
           <Link to="/" className="flex items-center gap-2 sm:gap-3 group shrink-0">
             <Logo className="w-7 h-7 sm:w-8 sm:h-8 transition-transform group-hover:scale-105 shrink-0" />
             <span className="font-headline-sm text-base sm:text-headline-sm text-text-primary tracking-tight font-bold whitespace-nowrap">
-              PDFChat AI
+              DevSuite AI
             </span>
           </Link>
 
@@ -144,6 +144,9 @@ export function LandingPage() {
           <nav className="hidden lg:flex items-center gap-space-lg" data-active-classes="text-on-surface font-semibold">
             <a aria-current="page" className="transition-colors text-on-surface font-semibold" data-path="features" href="#features">
               Features
+            </a>
+            <a className="font-body-sm text-body-sm text-on-surface-variant hover:text-on-surface transition-colors" data-path="suite" href="#suite">
+              Developer Suite
             </a>
             <a className="font-body-sm text-body-sm text-on-surface-variant hover:text-on-surface transition-colors" data-path="how-it-works" href="#how-it-works">
               How It Works
@@ -153,9 +156,6 @@ export function LandingPage() {
             </a>
             <Link className="font-body-sm text-body-sm text-on-surface-variant hover:text-on-surface transition-colors" data-path="docs" to="/docs">
               Docs
-            </Link>
-            <Link className="font-body-sm text-body-sm text-on-surface-variant hover:text-on-surface transition-colors" data-path="enterprise" to="/pricing#enterprise">
-              Enterprise
             </Link>
           </nav>
 
@@ -867,6 +867,147 @@ export function LandingPage() {
                   Your confidential documents and proprietary research are never used to train foundational AI models. Private and secure.
                 </p>
               </div>
+            </div>
+          </section>
+
+          {/* SECTION: DEVSUITE AI MULTI-TOOL WORKSPACES */}
+          <section className="max-w-[1240px] mx-auto w-full px-margin lg:px-margin-desktop py-20 border-t border-glass-border/30" id="suite">
+            <div className="flex flex-col items-center text-center mb-16">
+              <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-neon-indigo/15 font-badge-caps text-badge-caps text-neon-indigo uppercase tracking-wider mb-4 border border-neon-indigo/20">
+                <span className="w-1.5 h-1.5 rounded-full bg-neon-indigo animate-pulse"></span>
+                The Complete Developer &amp; Career Suite
+              </div>
+              <h2 className="font-headline-xl text-headline-xl text-text-primary max-w-3xl leading-tight mb-4">
+                Six specialized AI tools. <br />
+                <span className="bg-gradient-to-r from-neon-indigo via-neon-violet to-neon-fuchsia bg-clip-text text-transparent">
+                  One unified developer intelligence platform.
+                </span>
+              </h2>
+              <p className="font-body-md text-body-md text-text-secondary max-w-2xl">
+                Seamlessly digest complex documents, elevate your open-source identity, optimize your resume for applicant tracking systems, and generate production architecture diagrams.
+              </p>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {/* Tool 1: PDF Chat */}
+              <Link to="/dashboard/chat-pdf" className="group rounded-2xl bg-surface-container/80 backdrop-blur-xl p-7 hover:bg-surface-container-high/90 transition-all duration-300 border border-glass-border/50 hover:border-neon-indigo/50 hover:-translate-y-1 shadow-lg flex flex-col justify-between">
+                <div>
+                  <div className="w-12 h-12 rounded-xl bg-neon-indigo/15 text-neon-indigo flex items-center justify-center mb-5 group-hover:scale-105 transition-transform">
+                    <span className="material-symbols-outlined text-[24px]">description</span>
+                  </div>
+                  <div className="flex items-center justify-between mb-2">
+                    <h3 className="font-headline-sm text-headline-sm text-text-primary font-bold">PDF Chat Workspace</h3>
+                    <span className="text-[10px] px-2 py-0.5 rounded-full bg-neon-indigo/20 text-neon-indigo font-bold">RAG Core</span>
+                  </div>
+                  <p className="font-body-sm text-body-sm text-text-secondary leading-relaxed">
+                    Chat with 500+ page research papers and technical docs with zero hallucinations and exact page-level citations.
+                  </p>
+                </div>
+                <div className="pt-5 mt-4 border-t border-white/5 flex items-center text-xs font-semibold text-neon-indigo group-hover:translate-x-1 transition-transform">
+                  <span>Open PDF Workspace</span>
+                  <span className="material-symbols-outlined text-[16px] ml-1">arrow_forward</span>
+                </div>
+              </Link>
+
+              {/* Tool 2: GitHub Studio */}
+              <Link to="/dashboard/github-studio" className="group rounded-2xl bg-surface-container/80 backdrop-blur-xl p-7 hover:bg-surface-container-high/90 transition-all duration-300 border border-glass-border/50 hover:border-neon-violet/50 hover:-translate-y-1 shadow-lg flex flex-col justify-between">
+                <div>
+                  <div className="w-12 h-12 rounded-xl bg-neon-violet/15 text-neon-violet flex items-center justify-center mb-5 group-hover:scale-105 transition-transform">
+                    <span className="material-symbols-outlined text-[24px]">code</span>
+                  </div>
+                  <div className="flex items-center justify-between mb-2">
+                    <h3 className="font-headline-sm text-headline-sm text-text-primary font-bold">GitHub Profile Studio</h3>
+                    <span className="text-[10px] px-2 py-0.5 rounded-full bg-neon-violet/20 text-neon-violet font-bold">Popular</span>
+                  </div>
+                  <p className="font-body-sm text-body-sm text-text-secondary leading-relaxed">
+                    Build viral GitHub Profile READMEs with dynamic typewriter typing lines, badges, stats widgets, and 1-click GitHub push.
+                  </p>
+                </div>
+                <div className="pt-5 mt-4 border-t border-white/5 flex items-center text-xs font-semibold text-neon-violet group-hover:translate-x-1 transition-transform">
+                  <span>Launch Studio</span>
+                  <span className="material-symbols-outlined text-[16px] ml-1">arrow_forward</span>
+                </div>
+              </Link>
+
+              {/* Tool 3: Resume to README */}
+              <Link to="/dashboard/resume-to-readme" className="group rounded-2xl bg-surface-container/80 backdrop-blur-xl p-7 hover:bg-surface-container-high/90 transition-all duration-300 border border-glass-border/50 hover:border-neon-fuchsia/50 hover:-translate-y-1 shadow-lg flex flex-col justify-between">
+                <div>
+                  <div className="w-12 h-12 rounded-xl bg-neon-fuchsia/15 text-neon-fuchsia flex items-center justify-center mb-5 group-hover:scale-105 transition-transform">
+                    <span className="material-symbols-outlined text-[24px]">badge</span>
+                  </div>
+                  <div className="flex items-center justify-between mb-2">
+                    <h3 className="font-headline-sm text-headline-sm text-text-primary font-bold">Resume to README</h3>
+                    <span className="text-[10px] px-2 py-0.5 rounded-full bg-neon-fuchsia/20 text-neon-fuchsia font-bold">AI Bridge</span>
+                  </div>
+                  <p className="font-body-sm text-body-sm text-text-secondary leading-relaxed">
+                    Upload any PDF resume and instantly transform work experience, tech skills, and projects into a GitHub profile in seconds.
+                  </p>
+                </div>
+                <div className="pt-5 mt-4 border-t border-white/5 flex items-center text-xs font-semibold text-neon-fuchsia group-hover:translate-x-1 transition-transform">
+                  <span>Convert Resume</span>
+                  <span className="material-symbols-outlined text-[16px] ml-1">arrow_forward</span>
+                </div>
+              </Link>
+
+              {/* Tool 4: ATS Resume Matcher */}
+              <Link to="/dashboard/ats-matcher" className="group rounded-2xl bg-surface-container/80 backdrop-blur-xl p-7 hover:bg-surface-container-high/90 transition-all duration-300 border border-glass-border/50 hover:border-amber-500/50 hover:-translate-y-1 shadow-lg flex flex-col justify-between">
+                <div>
+                  <div className="w-12 h-12 rounded-xl bg-amber-500/15 text-amber-400 flex items-center justify-center mb-5 group-hover:scale-105 transition-transform">
+                    <span className="material-symbols-outlined text-[24px]">track_changes</span>
+                  </div>
+                  <div className="flex items-center justify-between mb-2">
+                    <h3 className="font-headline-sm text-headline-sm text-text-primary font-bold">ATS Resume Matcher</h3>
+                    <span className="text-[10px] px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-300 font-bold">STAR AI</span>
+                  </div>
+                  <p className="font-body-sm text-body-sm text-text-secondary leading-relaxed">
+                    Benchmark your resume against real job descriptions, reveal missing tech keywords, and get Google STAR rewrites with metrics.
+                  </p>
+                </div>
+                <div className="pt-5 mt-4 border-t border-white/5 flex items-center text-xs font-semibold text-amber-400 group-hover:translate-x-1 transition-transform">
+                  <span>Scan Resume Fit</span>
+                  <span className="material-symbols-outlined text-[16px] ml-1">arrow_forward</span>
+                </div>
+              </Link>
+
+              {/* Tool 5: Repo README Studio */}
+              <Link to="/dashboard/repo-docs" className="group rounded-2xl bg-surface-container/80 backdrop-blur-xl p-7 hover:bg-surface-container-high/90 transition-all duration-300 border border-glass-border/50 hover:border-cyan-500/50 hover:-translate-y-1 shadow-lg flex flex-col justify-between">
+                <div>
+                  <div className="w-12 h-12 rounded-xl bg-cyan-500/15 text-cyan-400 flex items-center justify-center mb-5 group-hover:scale-105 transition-transform">
+                    <span className="material-symbols-outlined text-[24px]">menu_book</span>
+                  </div>
+                  <div className="flex items-center justify-between mb-2">
+                    <h3 className="font-headline-sm text-headline-sm text-text-primary font-bold">Repo README Studio</h3>
+                    <span className="text-[10px] px-2 py-0.5 rounded-full bg-cyan-500/20 text-cyan-300 font-bold">Docs Gen</span>
+                  </div>
+                  <p className="font-body-sm text-body-sm text-text-secondary leading-relaxed">
+                    Paste any GitHub URL or select a repository. Inspects the file tree, extracts dependencies, and generates clean documentation.
+                  </p>
+                </div>
+                <div className="pt-5 mt-4 border-t border-white/5 flex items-center text-xs font-semibold text-cyan-400 group-hover:translate-x-1 transition-transform">
+                  <span>Generate Repo Docs</span>
+                  <span className="material-symbols-outlined text-[16px] ml-1">arrow_forward</span>
+                </div>
+              </Link>
+
+              {/* Tool 6: Architecture Diagrams */}
+              <Link to="/dashboard/diagrams" className="group rounded-2xl bg-surface-container/80 backdrop-blur-xl p-7 hover:bg-surface-container-high/90 transition-all duration-300 border border-glass-border/50 hover:border-indigo-500/50 hover:-translate-y-1 shadow-lg flex flex-col justify-between">
+                <div>
+                  <div className="w-12 h-12 rounded-xl bg-indigo-500/15 text-indigo-400 flex items-center justify-center mb-5 group-hover:scale-105 transition-transform">
+                    <span className="material-symbols-outlined text-[24px]">schema</span>
+                  </div>
+                  <div className="flex items-center justify-between mb-2">
+                    <h3 className="font-headline-sm text-headline-sm text-text-primary font-bold">Architecture Diagrams</h3>
+                    <span className="text-[10px] px-2 py-0.5 rounded-full bg-indigo-500/20 text-indigo-300 font-bold">Mermaid.js</span>
+                  </div>
+                  <p className="font-body-sm text-body-sm text-text-secondary leading-relaxed">
+                    Describe complex distributed systems in plain English and render interactive Mermaid.js flowcharts, sequences, and ER diagrams.
+                  </p>
+                </div>
+                <div className="pt-5 mt-4 border-t border-white/5 flex items-center text-xs font-semibold text-indigo-400 group-hover:translate-x-1 transition-transform">
+                  <span>Diagram Studio</span>
+                  <span className="material-symbols-outlined text-[16px] ml-1">arrow_forward</span>
+                </div>
+              </Link>
             </div>
           </section>
 

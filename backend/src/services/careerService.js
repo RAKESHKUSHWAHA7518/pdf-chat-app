@@ -240,7 +240,18 @@ Return ONLY a JSON object matching this schema:
   try {
     const result = await model.generateContent(prompt);
     const text = result.response.text();
-    return JSON.parse(text);
+    const parsed = JSON.parse(text);
+
+    // Normalize aboutMe fields to strings if LLM returns arrays
+    if (parsed.aboutMe && typeof parsed.aboutMe === "object") {
+      for (const [key, val] of Object.entries(parsed.aboutMe)) {
+        if (Array.isArray(val)) {
+          parsed.aboutMe[key] = val.join(", ");
+        }
+      }
+    }
+
+    return parsed;
   } catch (err) {
     logger.error({ err: err.message }, "Gemini generate profile AI error");
     throw new ApiError(500, "GENERATION_FAILED", "Failed to generate profile with AI");
@@ -289,4 +300,135 @@ Return JSON:
     throw new ApiError(500, "ENHANCE_FAILED", "Failed to enhance text with AI");
   }
 }
+
+/**
+ * Uses Gemini to generate Mermaid.js architecture diagrams and explanations from natural language prompts.
+ * @param {object} params
+ * @returns {Promise<object>}
+ */
+export async function generateDiagramAi({ prompt, diagramType = "architecture", theme = "dark" }) {
+  if (!prompt || prompt.trim().length === 0) {
+    throw new ApiError(400, "PROMPT_REQUIRED", "Please describe the system architecture or flow you want to diagram");
+  }
+
+  const model = genAI.getGenerativeModel({
+    model: env.GEMINI_CHAT_MODEL,
+    generationConfig: {
+      responseMimeType: "application/json",
+      temperature: 0.2,
+    },
+  });
+
+  const aiPrompt = `You are a Principal Cloud & Software Systems Architect.
+Generate a high-clarity, syntactically correct Mermaid.js diagram and detailed architecture explanation based on the user's prompt.
+
+USER REQUEST:
+"${prompt.slice(0, 4000)}"
+
+DIAGRAM TYPE: ${diagramType} (options: architecture, flowchart, sequence, cloud, microservices, auth, erDiagram)
+DESIRED THEME: ${theme}
+
+STRICT MERMAID RULES:
+1. Always start with a valid Mermaid directive: e.g. \`flowchart TD\`, \`flowchart LR\`, or \`sequenceDiagram\`.
+2. Wrap all node titles/labels containing spaces, parentheses, brackets, or punctuation in DOUBLE QUOTES! Example:
+   A["Client Browser (React SPA)"] --> B["API Gateway (Express / Rate Limiter)"]
+3. Never use raw parentheses or brackets inside unquoted labels (e.g. A[Client (React)] will crash Mermaid; MUST BE A["Client (React)"]).
+4. Organize complex systems into logical \`subgraph\` containers (e.g. subgraph "Frontend Layer", subgraph "Microservices Cluster", subgraph "Data Persistence").
+5. Use directional arrows with semantic protocol labels: e.g. -->|"HTTPS / JWT"|, -->|"gRPC"|, -->|"SQL Query"|, -->|"Pub/Sub Event"|.
+6. Include subtle modern styling classes (classDef) if applicable.
+
+Return ONLY a JSON object matching this schema:
+{
+  "title": "Clear Diagram Title",
+  "mermaidCode": "Valid multi-line Mermaid diagram definition string",
+  "explanation": "Executive 2-3 paragraph breakdown of the architecture, data flow, and components",
+  "components": [
+    {
+      "name": "Component Name (e.g. API Gateway)",
+      "role": "Brief description of its role in this architecture"
+    }
+  ],
+  "recommendations": [
+    "High availability or scalability recommendation 1",
+    "Security or caching recommendation 2"
+  ]
+}`;
+
+  try {
+    const result = await model.generateContent(aiPrompt);
+    const parsed = JSON.parse(result.response.text());
+    return parsed;
+  } catch (err) {
+    logger.error({ err: err.message }, "Gemini generateDiagramAi error");
+    throw new ApiError(500, "DIAGRAM_FAILED", "Failed to generate architecture diagram: " + err.message);
+  }
+}
+
+/**
+ * Uses Gemini to generate a tailored, professional Cover Letter matching a resume with a Job Description.
+ * @param {object} params
+ * @returns {Promise<object>}
+ */
+export async function generateCoverLetterAi({ resumeText, jobDescription, companyName = "Hiring Team", candidateName = "Candidate", tone = "confident" }) {
+  if (!resumeText || resumeText.length < 50) {
+    throw new ApiError(400, "RESUME_TOO_SHORT", "Resume text is too short to generate a cover letter");
+  }
+  if (!jobDescription || jobDescription.length < 30) {
+    throw new ApiError(400, "JD_TOO_SHORT", "Job description is too short");
+  }
+
+  const model = genAI.getGenerativeModel({
+    model: env.GEMINI_CHAT_MODEL,
+    generationConfig: {
+      temperature: 0.4,
+    },
+  });
+
+  const prompt = `You are an elite executive career coach and technical hiring consultant.
+Write an exceptional, highly compelling, personalized Cover Letter for a candidate applying to a target role.
+
+CANDIDATE RESUME:
+"""
+${resumeText.slice(0, 25000)}
+"""
+
+TARGET JOB DESCRIPTION:
+"""
+${jobDescription.slice(0, 15000)}
+"""
+
+METADATA:
+- Company / Team: ${companyName}
+- Candidate Name: ${candidateName}
+- Desired Tone: ${tone} (e.g. confident, executive, technical, passionate, humble)
+
+WRITING GUIDELINES:
+1. Do NOT write generic filler like "I am writing to express my strong interest in...". Start with a magnetic hook showing genuine appreciation for what the company/team builds.
+2. Directly bridge 2-3 specific achievements, quantifiable metrics, or technical projects from the resume to the core challenges mentioned in the job description.
+3. Highlight high-signal technologies, system scale, or architecture capabilities directly relevant to the role.
+4. Conclude with a strong, confident forward-looking closing statement and polite call to action.
+5. Format the output in clean, elegant Markdown with proper date, recipient address block, salutation, body paragraphs, and sign-off.
+
+Output ONLY the complete Markdown text of the cover letter. Do not wrap in extra commentary or \`\`\`markdown backticks.`;
+
+  try {
+    const result = await model.generateContent(prompt);
+    let letter = result.response.text();
+    if (letter.startsWith("```markdown")) {
+      letter = letter.replace(/^```markdown\n?/, "").replace(/\n?```$/, "");
+    } else if (letter.startsWith("```md")) {
+      letter = letter.replace(/^```md\n?/, "").replace(/\n?```$/, "");
+    }
+
+    return {
+      coverLetter: letter.trim(),
+      companyName,
+    };
+  } catch (err) {
+    logger.error({ err: err.message }, "Gemini generateCoverLetterAi error");
+    throw new ApiError(500, "COVER_LETTER_FAILED", "Failed to generate cover letter: " + err.message);
+  }
+}
+
+
 

@@ -12,6 +12,8 @@ import {
   analyzeAtsMatch,
   generateGithubProfileAi,
   enhanceBioAi,
+  generateDiagramAi,
+  generateCoverLetterAi,
 } from "../services/careerService.js";
 
 const upload = multer({
@@ -153,4 +155,89 @@ careerRouter.post("/enhance-bio-ai", async (req, res, next) => {
     next(err);
   }
 });
+
+/**
+ * POST /api/career/generate-diagram
+ * Generates Mermaid.js architecture diagrams and explanations.
+ * Consumes 1 credit (or free for Pro members).
+ */
+careerRouter.post("/generate-diagram", requireAuth, async (req, res, next) => {
+  try {
+    const { prompt, diagramType, theme } = req.body || {};
+    const deduction = await deductCredit(
+      req.userId,
+      "diagram_generation",
+      "Architecture Diagram Generation"
+    );
+
+    const result = await generateDiagramAi({
+      prompt: String(prompt || "").trim(),
+      diagramType: String(diagramType || "architecture").trim(),
+      theme: String(theme || "dark").trim(),
+    });
+
+    res.json({
+      success: true,
+      ...result,
+      creditsRemaining: deduction.creditsRemaining,
+      subscription: deduction.subscription,
+    });
+  } catch (err) {
+    next(err);
+  }
+});
+
+/**
+ * POST /api/career/cover-letter
+ * Generates an executive, tailored Cover Letter from Resume PDF/text + Job Description.
+ * Consumes 1 credit (or free for Pro members).
+ */
+careerRouter.post("/cover-letter", requireAuth, upload.single("resume"), async (req, res, next) => {
+  try {
+    let resumeText = "";
+    const jobDescription = String(req.body.jobDescription || "").trim();
+    const companyName = String(req.body.companyName || "Hiring Team").trim();
+    const candidateName = String(req.body.candidateName || "Candidate").trim();
+    const tone = String(req.body.tone || "confident").trim();
+
+    if (!jobDescription) {
+      throw new ApiError(400, "MISSING_JD", "Job description is required to generate a tailored cover letter");
+    }
+
+    if (req.file) {
+      resumeText = await extractTextFromPdfBuffer(req.file.buffer);
+    } else if (req.body.sessionId) {
+      resumeText = await extractTextFromSession(req.body.sessionId);
+    } else if (req.body.resumeText) {
+      resumeText = String(req.body.resumeText).trim();
+    } else {
+      throw new ApiError(400, "MISSING_INPUT", "Please upload a resume PDF, select an existing document, or paste resume text");
+    }
+
+    const deduction = await deductCredit(
+      req.userId,
+      "cover_letter",
+      `Cover Letter for ${companyName}`
+    );
+
+    const result = await generateCoverLetterAi({
+      resumeText,
+      jobDescription,
+      companyName,
+      candidateName,
+      tone,
+    });
+
+    res.json({
+      success: true,
+      ...result,
+      creditsRemaining: deduction.creditsRemaining,
+      subscription: deduction.subscription,
+    });
+  } catch (err) {
+    next(err);
+  }
+});
+
+
 

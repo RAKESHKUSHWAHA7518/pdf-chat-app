@@ -261,9 +261,18 @@ export function GithubStudio({ initialData = null }) {
         setSelectedTech(profile.suggestedTech);
       }
       if (profile.aboutMe) {
+        const toCleanStr = (val) => {
+          if (!val) return "";
+          if (Array.isArray(val)) return val.join(", ");
+          return typeof val === "string" ? val : String(val);
+        };
         setAboutMe((prev) => ({
           ...prev,
-          ...profile.aboutMe,
+          workingOn: toCleanStr(profile.aboutMe.workingOn) || prev.workingOn,
+          learning: toCleanStr(profile.aboutMe.learning) || prev.learning,
+          collaborating: toCleanStr(profile.aboutMe.collaborating) || prev.collaborating,
+          askMeAbout: toCleanStr(profile.aboutMe.askMeAbout) || prev.askMeAbout,
+          funFact: toCleanStr(profile.aboutMe.funFact) || prev.funFact,
           showAboutMe: true,
         }));
       }
@@ -386,12 +395,23 @@ export function GithubStudio({ initialData = null }) {
 
     // About Me Section
     if (aboutMe.showAboutMe) {
+      const safeFact = (val) => {
+        if (!val) return "";
+        if (Array.isArray(val)) return val.join(", ").trim();
+        return typeof val === "string" ? val.trim() : String(val).trim();
+      };
       const facts = [];
-      if (aboutMe.workingOn?.trim()) facts.push(`- 🔭 I'm currently working on **${aboutMe.workingOn}**`);
-      if (aboutMe.learning?.trim()) facts.push(`- 🌱 I'm currently learning **${aboutMe.learning}**`);
-      if (aboutMe.collaborating?.trim()) facts.push(`- 👯 I'm looking to collaborate on **${aboutMe.collaborating}**`);
-      if (aboutMe.askMeAbout?.trim()) facts.push(`- 💬 Ask me about **${aboutMe.askMeAbout}**`);
-      if (aboutMe.funFact?.trim()) facts.push(`- ⚡ Fun fact: **${aboutMe.funFact}**`);
+      const wo = safeFact(aboutMe.workingOn);
+      const ln = safeFact(aboutMe.learning);
+      const cl = safeFact(aboutMe.collaborating);
+      const am = safeFact(aboutMe.askMeAbout);
+      const ff = safeFact(aboutMe.funFact);
+
+      if (wo) facts.push(`- 🔭 I'm currently working on **${wo}**`);
+      if (ln) facts.push(`- 🌱 I'm currently learning **${ln}**`);
+      if (cl) facts.push(`- 👯 I'm looking to collaborate on **${cl}**`);
+      if (am) facts.push(`- 💬 Ask me about **${am}**`);
+      if (ff) facts.push(`- ⚡ Fun fact: **${ff}**`);
 
       if (facts.length > 0) {
         md += `### 👨‍💻 About Me\n\n${facts.join("\n")}\n\n`;
@@ -1111,7 +1131,7 @@ e.g. 'I am an AI engineer building LLM agents with LangChain, Next.js, and Pytho
                   <label className="text-[10px] text-slate-400 font-semibold block mb-0.5">🔭 Currently working on...</label>
                   <input
                     type="text"
-                    value={aboutMe.workingOn}
+                    value={aboutMe.workingOn || ""}
                     onChange={(e) => setAboutMe({ ...aboutMe, workingOn: e.target.value })}
                     className="w-full bg-slate-950 border border-slate-800 rounded-lg px-2.5 py-1.5 text-xs text-slate-200 focus:outline-none focus:border-indigo-500"
                   />
@@ -1120,7 +1140,7 @@ e.g. 'I am an AI engineer building LLM agents with LangChain, Next.js, and Pytho
                   <label className="text-[10px] text-slate-400 font-semibold block mb-0.5">🌱 Currently learning...</label>
                   <input
                     type="text"
-                    value={aboutMe.learning}
+                    value={aboutMe.learning || ""}
                     onChange={(e) => setAboutMe({ ...aboutMe, learning: e.target.value })}
                     className="w-full bg-slate-950 border border-slate-800 rounded-lg px-2.5 py-1.5 text-xs text-slate-200 focus:outline-none focus:border-indigo-500"
                   />
@@ -1129,7 +1149,7 @@ e.g. 'I am an AI engineer building LLM agents with LangChain, Next.js, and Pytho
                   <label className="text-[10px] text-slate-400 font-semibold block mb-0.5">👯 Looking to collaborate on...</label>
                   <input
                     type="text"
-                    value={aboutMe.collaborating}
+                    value={aboutMe.collaborating || ""}
                     onChange={(e) => setAboutMe({ ...aboutMe, collaborating: e.target.value })}
                     className="w-full bg-slate-950 border border-slate-800 rounded-lg px-2.5 py-1.5 text-xs text-slate-200 focus:outline-none focus:border-indigo-500"
                   />
@@ -1138,7 +1158,7 @@ e.g. 'I am an AI engineer building LLM agents with LangChain, Next.js, and Pytho
                   <label className="text-[10px] text-slate-400 font-semibold block mb-0.5">💬 Ask me about...</label>
                   <input
                     type="text"
-                    value={aboutMe.askMeAbout}
+                    value={aboutMe.askMeAbout || ""}
                     onChange={(e) => setAboutMe({ ...aboutMe, askMeAbout: e.target.value })}
                     className="w-full bg-slate-950 border border-slate-800 rounded-lg px-2.5 py-1.5 text-xs text-slate-200 focus:outline-none focus:border-indigo-500"
                   />
@@ -1147,7 +1167,7 @@ e.g. 'I am an AI engineer building LLM agents with LangChain, Next.js, and Pytho
                   <label className="text-[10px] text-slate-400 font-semibold block mb-0.5">⚡ Fun fact...</label>
                   <input
                     type="text"
-                    value={aboutMe.funFact}
+                    value={aboutMe.funFact || ""}
                     onChange={(e) => setAboutMe({ ...aboutMe, funFact: e.target.value })}
                     className="w-full bg-slate-950 border border-slate-800 rounded-lg px-2.5 py-1.5 text-xs text-slate-200 focus:outline-none focus:border-indigo-500"
                   />

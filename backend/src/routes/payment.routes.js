@@ -18,8 +18,8 @@ import {
 
 export const paymentRouter = Router();
 
-// GET /api/payments/credits/balance — Get user's credit balance and subscription status
-paymentRouter.get("/credits/balance", requireAuth, async (req, res, next) => {
+// GET /api/payments/credits/balance or /api/payments/credits — Get user's credit balance and subscription status
+paymentRouter.get(["/credits/balance", "/credits"], requireAuth, async (req, res, next) => {
   try {
     const data = await getUserCredits(req.userId);
     res.json(data);

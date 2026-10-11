@@ -45,6 +45,10 @@ const envSchema = z.object({
   RAZORPAY_CREDITS_PACK_50_AMOUNT: z.coerce.number().int().positive().default(129900),
   RAZORPAY_PRO_MONTHLY_AMOUNT: z.coerce.number().int().positive().default(29900),
   RAZORPAY_PRO_YEARLY_AMOUNT: z.coerce.number().int().positive().default(299000),
+
+  // GitHub OAuth (optional)
+  GITHUB_CLIENT_ID: z.string().optional(),
+  GITHUB_CLIENT_SECRET: z.string().optional(),
 });
 
 const parsed = envSchema.safeParse(process.env);

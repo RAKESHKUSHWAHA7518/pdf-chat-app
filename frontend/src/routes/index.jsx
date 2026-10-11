@@ -11,6 +11,10 @@ import { DocumentsPage } from "../pages/DocumentsPage";
 import { SettingsPage } from "../pages/SettingsPage";
 import { GithubStudio } from "../pages/GithubStudio";
 import { ResumeToReadme } from "../pages/ResumeToReadme";
+import { AtsMatcher } from "../pages/AtsMatcher";
+import { CoverLetterGenerator } from "../pages/CoverLetterGenerator";
+import { RepoDocsPage } from "../pages/RepoDocsPage";
+import { DiagramStudio } from "../pages/DiagramStudio";
 import App from "../App.jsx";
 
 export const router = createBrowserRouter([
@@ -95,6 +99,10 @@ export const router = createBrowserRouter([
       { index: true, element: <Navigate to="/dashboard/github-studio" replace /> },
       { path: "github-studio", element: <GithubStudio /> },
       { path: "resume-to-readme", element: <ResumeToReadme /> },
+      { path: "cover-letter", element: <CoverLetterGenerator /> },
+      { path: "ats-matcher", element: <AtsMatcher /> },
+      { path: "repo-docs", element: <RepoDocsPage /> },
+      { path: "diagrams", element: <DiagramStudio /> },
       { path: "chat-pdf", element: <App /> },
       { path: "documents", element: <DocumentsPage /> },
       { path: "settings", element: <SettingsPage /> },
