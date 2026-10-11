@@ -18,8 +18,8 @@ const credentialsSchema = z.object({
 
 export const authRouter = Router();
 
-// POST /api/auth/signup — Create account, returns JWT
-authRouter.post("/signup", validate(credentialsSchema), async (req, res, next) => {
+// POST /api/auth/signup or /api/auth/register — Create account, returns JWT
+authRouter.post(["/signup", "/register"], validate(credentialsSchema), async (req, res, next) => {
   try {
     const { email, password } = req.body;
     res.status(201).json(await signup(email, password));

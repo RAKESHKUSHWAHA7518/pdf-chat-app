@@ -8,51 +8,58 @@ app_port: 7860
 pinned: false
 ---
 
-# AI-Powered PDF Chat & Document Intelligence Platform
+# DevSuite AI — Multi-Tool AI Developer & Career Intelligence Platform
 
-A production-grade, full-stack Generative AI application that enables users to upload PDF documents and interact with them in real-time using Google Gemini AI, LangChain RAG, and MongoDB Atlas Vector Search.
+A production-grade, full-stack AI platform unifying six specialized developer and career acceleration tools under a single custom JWT authentication engine, dark-mode design system, and Razorpay credit/subscription engine.
 
 **Developed by:** [Rakesh Kushwaha](https://github.com/RAKESHKUSHWAHA7518)  
-**Deployment Target:** Render.com / Railway (Single Unified Full-Stack Service)
+**Deployment Target:** Render.com / Railway / Koyeb / Docker (Single Unified Full-Stack Service)
 
 ---
 
 ## ⚡ Architecture & Tech Stack
 
-- **Frontend**: React 19, Vite, React Markdown, CSS Variables & Modern Glassmorphism
+- **Frontend**: React 19, Vite, React Markdown, Remark GFM, Rehype Raw, Mermaid.js, Lucide Icons, Modern Pure CSS Glassmorphism
 - **Backend**: Node.js & Express (Layered: routes → middleware → services)
-- **AI & RAG Engine**: Google Gemini (`gemini-flash-latest` chat + `gemini-embedding-2` embeddings), LangChain.js
+- **AI & RAG Engine**: Google Gemini 2.5 Flash chat & Gemini embeddings, LangChain.js
 - **Database & Vector Search**: MongoDB Atlas M0 (`$vectorSearch` semantic retrieval across document chunks)
-- **Authentication**: JWT authentication with scrypt password hashing
+- **GitHub Integration**: `@octokit/rest` with AES-256 encrypted Personal Access Tokens stored in MongoDB
+- **Diagram Engine**: Mermaid.js text-to-diagram generation and visual SVG canvas rendering
+- **Monetization & Credits**: Razorpay integration with Webhooks, 10/50 credit packs, and Pro Monthly/Yearly subscriptions
+- **Authentication**: Custom JWT authentication with scrypt password hashing
 - **Security & Reliability**: Helmet, express-rate-limit, Zod schema validation, Pino structured logging
-- **Unified Hosting**: In production, Express directly serves the optimized React SPA bundle from `frontend/dist`. No separate frontend hosting or Vercel timeouts!
+- **Unified Hosting**: In production, Express directly serves the optimized React SPA bundle from `frontend/dist`.
 
 ```
-[Browser: React 19 SPA / SSE Client]
+[Browser: React 19 Multi-Tool SPA]
              │
              │ HTTP / & /api/*
              ▼
-[Express Backend Server]
+[Express Backend Gateway]
   ├── Serves React Static Bundle (frontend/dist)
-  ├── Document Chunking & Ingestion
-  ├── Server-Sent Events (SSE) Streaming
-  └── JWT Auth & Rate Limiting
+  ├── 1. PDF Chat Workspace (LangChain + Gemini RAG)
+  ├── 2. GitHub Profile README Studio (Octokit 1-Click Commit)
+  ├── 3. Resume-to-README Transformer (PDF to Markdown Profile)
+  ├── 4. AI ATS Resume Matcher & Google STAR Optimizer
+  ├── 5. GitHub Repo to README Studio (Manifest inspection & Docs gen)
+  ├── 6. Architecture Diagram Studio (Mermaid.js Text to Diagram)
+  └── Shared Credits (Razorpay) & Encrypted JWT / GitHub Secrets
              │
-             ├── MongoDB Atlas M0 ($vectorSearch & Documents)
-             └── Google Gemini API (Embeddings & Generative Chat)
+             ├── MongoDB Atlas M0 ($vectorSearch, Users, Documents, Payments)
+             └── Google Gemini 2.5 Flash API
 ```
 
 ---
 
-## 🚀 Key Features
+## 🚀 The 6 Specialized Developer Workspaces
 
-- 📄 **Intelligent Document Processing**: Upload PDFs up to 10MB; extracts text, chunks semantically, computes embeddings, and indexes them in MongoDB Atlas Vector Search.
-- 💬 **Real-Time Streaming Chat (SSE)**: Server-Sent Events streaming token-by-token responses with markdown formatting, code highlights, and conversation memory.
-- 🔍 **Semantic Vector Search**: LangChain-powered Retrieval-Augmented Generation (RAG) providing accurate answers grounded in document context.
-- 📚 **Persistent Document Library**: Signed-in users' uploaded PDFs persist in MongoDB — switch between uploaded documents anytime or delete unneeded files.
-- 🎁 **Freemium Guest Quota System**: Guests can upload and try the app with 1 free document before seeing a seamless signup wall.
-- 🔐 **Secure User Accounts**: Complete signup/login system with JWT tokens (7-day sessions).
-- 🧹 **Automatic Cleanup**: Temporary sessions and guest quotas auto-expire using TTL indexing to maintain zero memory leaks.
+1. 📄 **PDF Chat Workspace (`/dashboard/chat-pdf`)**: Multi-page PDF conversational intelligence with sub-second streaming answers and verifiable source page citations.
+2. 🐙 **GitHub Profile Studio (`/dashboard/github-studio`)**: Interactive profile builder with typing lines, categorized tech badges, stats widgets, and 1-click publishing directly to `username/username` on GitHub.
+3. 📑 **Resume-to-README Generator (`/dashboard/resume-to-readme`)**: Converts any PDF resume or stored document into an impactful GitHub README in under 5 seconds.
+4. 🎯 **AI ATS Resume Matcher (`/dashboard/ats-matcher`)**: Evaluates resumes against technical job descriptions, calculates ATS keyword match scores, identifies missing skills, and rewrites bullets using the Google STAR method.
+5. 📦 **Repo README Generator (`/dashboard/repo-docs`)**: Inspects repository file trees, parses `package.json`/dependencies, and generates comprehensive production-grade documentation.
+6. 📐 **Architecture Diagram Studio (`/dashboard/diagrams`)**: Generates system architecture flowcharts, sequence diagrams, and microservice topologies from plain English descriptions using Mermaid.js.
+
 
 ---
 

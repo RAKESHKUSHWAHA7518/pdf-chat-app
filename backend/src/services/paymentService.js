@@ -12,36 +12,53 @@ const razorpay = new Razorpay({
   key_secret: env.RAZORPAY_KEY_SECRET,
 });
 
-const CREDIT_PACKS = {
+export const CREDIT_PACKS = {
   pack_10: { credits: 10, amount: env.RAZORPAY_CREDITS_PACK_10_AMOUNT, label: "10 PDF Credits" },
   pack_50: { credits: 50, amount: env.RAZORPAY_CREDITS_PACK_50_AMOUNT, label: "50 PDF Credits" },
+  pack_100: { credits: 100, amount: env.RAZORPAY_CREDITS_PACK_100_AMOUNT, label: "100 PDF Credits" },
 };
 
-const SUBSCRIPTION_PLANS = {
+export const SUBSCRIPTION_PLANS = {
   pro_monthly: {
+    planId: env.RAZORPAY_PLAN_PRO_MONTHLY || "plan_Tl77SFPCromUyx",
     amount: env.RAZORPAY_PRO_MONTHLY_AMOUNT,
     interval: "monthly",
     label: "Pro Monthly",
     price: "₹299/mo",
   },
   pro_yearly: {
+    planId: env.RAZORPAY_PLAN_PRO_YEARLY || "plan_Tl78c7YHFac2ya",
     amount: env.RAZORPAY_PRO_YEARLY_AMOUNT,
     interval: "yearly",
     label: "Pro Yearly",
-    price: "₹2,990/yr",
+    price: "₹2,999/yr",
   },
 };
 
-function verifyRazorpaySignature(orderId, paymentId, signature) {
+function verifyRazorpayOrderSignature(orderId, paymentId, signature) {
+  if (!signature || !orderId || !paymentId) return false;
   const body = `${orderId}|${paymentId}`;
   const expectedSignature = crypto
     .createHmac("sha256", env.RAZORPAY_KEY_SECRET)
     .update(body)
     .digest("hex");
-  return crypto.timingSafeEqual(
-    Buffer.from(expectedSignature),
-    Buffer.from(signature)
-  );
+  const expectedBuf = Buffer.from(expectedSignature);
+  const signatureBuf = Buffer.from(signature);
+  if (expectedBuf.length !== signatureBuf.length) return false;
+  return crypto.timingSafeEqual(expectedBuf, signatureBuf);
+}
+
+function verifyRazorpaySubscriptionSignature(subscriptionId, paymentId, signature) {
+  if (!signature || !subscriptionId || !paymentId) return false;
+  const body = `${paymentId}|${subscriptionId}`;
+  const expectedSignature = crypto
+    .createHmac("sha256", env.RAZORPAY_KEY_SECRET)
+    .update(body)
+    .digest("hex");
+  const expectedBuf = Buffer.from(expectedSignature);
+  const signatureBuf = Buffer.from(signature);
+  if (expectedBuf.length !== signatureBuf.length) return false;
+  return crypto.timingSafeEqual(expectedBuf, signatureBuf);
 }
 
 async function getOrCreateRazorpayCustomer(userId, email) {
@@ -51,7 +68,7 @@ async function getOrCreateRazorpayCustomer(userId, email) {
   }
 
   const customer = await razorpay.customers.create({
-    email,
+    email: email || "customer@pdfchat.ai",
     contact: "",
     notes: { userId },
   });
@@ -70,7 +87,7 @@ export async function createCreditsOrder(userId, packId, email) {
   const order = await razorpay.orders.create({
     amount: pack.amount,
     currency: "INR",
-    receipt: `credits_${userId}_${Date.now()}`,
+    receipt: `credits_${userId}_${Date.now()}`.slice(0, 40),
     notes: { userId, packId, type: "credits" },
   });
 
@@ -94,39 +111,94 @@ export async function createSubscriptionOrder(userId, planId, email) {
   const plan = SUBSCRIPTION_PLANS[planId];
   if (!plan) throw new ApiError(400, "INVALID_PLAN", "Invalid subscription plan");
 
-  const customerId = await getOrCreateRazorpayCustomer(userId, email);
+  const rzpPlanId = plan.planId || (planId === "pro_monthly" ? env.RAZORPAY_PLAN_PRO_MONTHLY : env.RAZORPAY_PLAN_PRO_YEARLY);
 
-  const subscription = await razorpay.subscriptions.create({
-    plan_id: planId === "pro_monthly" ? "plan_pro_monthly" : "plan_pro_yearly",
-    customer_id: customerId,
-    total_count: plan.interval === "monthly" ? 12 : 1,
-    notes: { userId, planId },
-  });
+  // Try creating recurring Razorpay subscription first
+  try {
+    const customerId = await getOrCreateRazorpayCustomer(userId, email);
 
-  await collections.payments().insertOne({
-    _id: crypto.randomUUID(),
-    userId,
-    razorpayOrderId: subscription.id,
-    razorpaySubscriptionId: subscription.id,
-    amount: plan.amount,
-    currency: "INR",
-    type: "subscription",
-    planId,
-    status: "created",
-    createdAt: new Date(),
-  });
+    const subscription = await razorpay.subscriptions.create({
+      plan_id: rzpPlanId,
+      customer_id: customerId,
+      total_count: plan.interval === "monthly" ? 12 : 1,
+      quantity: 1,
+      customer_notify: 1,
+      notes: { userId, planId },
+    });
 
-  return { subscriptionId: subscription.id, amount: plan.amount, currency: "INR", key: env.RAZORPAY_KEY_ID, plan };
+    await collections.payments().insertOne({
+      _id: crypto.randomUUID(),
+      userId,
+      razorpayOrderId: subscription.id,
+      razorpaySubscriptionId: subscription.id,
+      amount: plan.amount,
+      currency: "INR",
+      type: "subscription",
+      planId,
+      status: "created",
+      createdAt: new Date(),
+    });
+
+    return {
+      subscriptionId: subscription.id,
+      amount: plan.amount,
+      currency: "INR",
+      key: env.RAZORPAY_KEY_ID,
+      plan,
+    };
+  } catch (subErr) {
+    logger.warn({ err: subErr.message }, "Razorpay subscription creation failed, falling back to standard order");
+
+    // Seamless fallback to standard one-time order for Pro plan access
+    const order = await razorpay.orders.create({
+      amount: plan.amount,
+      currency: "INR",
+      receipt: `sub_${userId}_${Date.now()}`.slice(0, 40),
+      notes: { userId, planId, type: "subscription" },
+    });
+
+    await collections.payments().insertOne({
+      _id: crypto.randomUUID(),
+      userId,
+      razorpayOrderId: order.id,
+      amount: plan.amount,
+      currency: "INR",
+      type: "subscription",
+      planId,
+      status: "created",
+      createdAt: new Date(),
+    });
+
+    return {
+      orderId: order.id,
+      amount: order.amount,
+      currency: order.currency,
+      key: env.RAZORPAY_KEY_ID,
+      plan,
+    };
+  }
 }
 
-export async function verifyPaymentAndGrant(userId, { razorpay_order_id, razorpay_payment_id, razorpay_signature }) {
-  if (!verifyRazorpaySignature(razorpay_order_id, razorpay_payment_id, razorpay_signature)) {
-    throw new ApiError(400, "INVALID_SIGNATURE", "Payment signature verification failed");
+export async function verifyPaymentAndGrant(userId, { razorpay_order_id, razorpay_subscription_id, razorpay_payment_id, razorpay_signature }) {
+  const isSubscription = Boolean(razorpay_subscription_id);
+
+  if (isSubscription) {
+    if (!verifyRazorpaySubscriptionSignature(razorpay_subscription_id, razorpay_payment_id, razorpay_signature)) {
+      throw new ApiError(400, "INVALID_SIGNATURE", "Subscription signature verification failed");
+    }
+  } else {
+    if (!verifyRazorpayOrderSignature(razorpay_order_id, razorpay_payment_id, razorpay_signature)) {
+      throw new ApiError(400, "INVALID_SIGNATURE", "Payment signature verification failed");
+    }
   }
 
-  const payment = await collections.payments().findOne({ razorpayOrderId: razorpay_order_id });
-  if (!payment) throw new ApiError(404, "ORDER_NOT_FOUND", "Order not found");
-  if (payment.userId !== userId) throw new ApiError(403, "FORBIDDEN", "Order does not belong to user");
+  const query = isSubscription
+    ? { razorpaySubscriptionId: razorpay_subscription_id }
+    : { razorpayOrderId: razorpay_order_id };
+
+  const payment = await collections.payments().findOne(query);
+  if (!payment) throw new ApiError(404, "ORDER_NOT_FOUND", "Order or subscription record not found");
+  if (payment.userId !== userId) throw new ApiError(403, "FORBIDDEN", "Payment record does not belong to user");
   if (payment.status === "paid") return { alreadyProcessed: true, payment };
 
   await collections.payments().updateOne(
@@ -144,7 +216,7 @@ export async function verifyPaymentAndGrant(userId, { razorpay_order_id, razorpa
   if (payment.type === "credits") {
     await grantCredits(userId, payment.creditsGranted, payment._id, `Credit pack: ${payment.packId}`);
   } else if (payment.type === "subscription") {
-    await activateSubscription(userId, payment.planId, payment.razorpaySubscriptionId);
+    await activateSubscription(userId, payment.planId, payment.razorpaySubscriptionId || razorpay_subscription_id || payment.razorpayOrderId);
   }
 
   return { alreadyProcessed: false, payment };
@@ -157,6 +229,8 @@ async function grantCredits(userId, amount, referenceId, description) {
     { returnDocument: "after" }
   );
 
+  const balanceAfter = user?.credits ?? amount;
+
   await collections.creditTransactions().insertOne({
     _id: crypto.randomUUID(),
     userId,
@@ -164,12 +238,12 @@ async function grantCredits(userId, amount, referenceId, description) {
     type: "purchase",
     referenceId,
     description,
-    balanceAfter: user.credits,
+    balanceAfter,
     createdAt: new Date(),
   });
 
-  logger.info({ userId, amount, balance: user.credits }, "Credits granted");
-  return user.credits;
+  logger.info({ userId, amount, balance: balanceAfter }, "Credits granted");
+  return balanceAfter;
 }
 
 async function activateSubscription(userId, planId, razorpaySubscriptionId) {
@@ -193,7 +267,7 @@ async function activateSubscription(userId, planId, razorpaySubscriptionId) {
   logger.info({ userId, planId, periodEnd }, "Subscription activated");
 }
 
-export async function deductCredit(userId, sessionId) {
+export async function deductCredit(userId, sessionId, description = "PDF upload / chat session") {
   let user = await collections.users().findOne({ _id: userId });
   if (!user) throw new ApiError(404, "USER_NOT_FOUND", "User not found");
 
@@ -228,7 +302,7 @@ export async function deductCredit(userId, sessionId) {
     amount: -1,
     type: "usage",
     referenceId: sessionId,
-    description: "PDF upload / chat session",
+    description,
     balanceAfter: updated.credits,
     createdAt: new Date(),
   });
@@ -289,14 +363,15 @@ export async function getCreditTransactions(userId) {
 }
 
 export function verifyWebhookSignature(payload, signature) {
+  if (!signature || !env.RAZORPAY_WEBHOOK_SECRET) return false;
   const expectedSignature = crypto
     .createHmac("sha256", env.RAZORPAY_WEBHOOK_SECRET)
     .update(payload)
     .digest("hex");
-  return crypto.timingSafeEqual(
-    Buffer.from(expectedSignature),
-    Buffer.from(signature)
-  );
+  const expectedBuf = Buffer.from(expectedSignature);
+  const signatureBuf = Buffer.from(signature);
+  if (expectedBuf.length !== signatureBuf.length) return false;
+  return crypto.timingSafeEqual(expectedBuf, signatureBuf);
 }
 
 export async function handleWebhookEvent(event) {
@@ -311,7 +386,6 @@ export async function handleWebhookEvent(event) {
       if (!paymentEntity) break;
       const orderId = paymentEntity.order_id;
       const paymentId = paymentEntity.id;
-      const signature = paymentEntity.signature;
 
       const payment = await collections.payments().findOne({ razorpayOrderId: orderId });
       if (!payment) {
@@ -324,17 +398,11 @@ export async function handleWebhookEvent(event) {
         break;
       }
 
-      if (!verifyRazorpaySignature(orderId, paymentId, signature)) {
-        logger.error({ orderId, paymentId }, "Webhook signature verification failed");
-        break;
-      }
-
       await collections.payments().updateOne(
         { _id: payment._id },
         {
           $set: {
             razorpayPaymentId: paymentId,
-            razorpaySignature: signature,
             status: "paid",
             paidAt: new Date(),
           },
@@ -453,5 +521,3 @@ export async function handleWebhookEvent(event) {
     }
   }
 }
-
-export { CREDIT_PACKS, SUBSCRIPTION_PLANS };

@@ -131,3 +131,171 @@ export const getPaymentHistory = (auth) =>
 
 export const getCreditTransactions = (auth) =>
   callApi("/payments/transactions", auth).then((d) => d.transactions);
+
+// ── Career & Resume Intelligence ──
+export async function synthesizeResumeToReadme(auth, { file, sessionId, resumeText }) {
+  let res;
+  if (file) {
+    const formData = new FormData();
+    formData.append("resume", file);
+    res = await fetch(`${API_URL}/career/resume-to-readme`, {
+      method: "POST",
+      headers: authHeaders(auth),
+      body: formData,
+    });
+  } else {
+    res = await fetch(`${API_URL}/career/resume-to-readme`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", ...authHeaders(auth) },
+      body: JSON.stringify({ sessionId, resumeText }),
+    });
+  }
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) {
+    throw httpError(res.status, errorMessage(data, "Failed to synthesize resume"));
+  }
+  return data;
+}
+
+export async function scanResumeAts(auth, { file, sessionId, resumeText, jobDescription }) {
+  let res;
+  if (file) {
+    const formData = new FormData();
+    formData.append("resume", file);
+    formData.append("jobDescription", jobDescription);
+    res = await fetch(`${API_URL}/career/ats-scan`, {
+      method: "POST",
+      headers: authHeaders(auth),
+      body: formData,
+    });
+  } else {
+    res = await fetch(`${API_URL}/career/ats-scan`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", ...authHeaders(auth) },
+      body: JSON.stringify({ sessionId, resumeText, jobDescription }),
+    });
+  }
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) {
+    throw httpError(res.status, errorMessage(data, "Failed to analyze ATS match"));
+  }
+  return data;
+}
+
+export async function generateProfileAi(auth, payload) {
+  const res = await fetch(`${API_URL}/career/generate-profile-ai`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...authHeaders(auth) },
+    body: JSON.stringify(payload),
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) {
+    throw httpError(res.status, errorMessage(data, "Failed to generate profile with AI"));
+  }
+  return data.profile;
+}
+
+export async function enhanceBioAi(auth, payload) {
+  const res = await fetch(`${API_URL}/career/enhance-bio-ai`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...authHeaders(auth) },
+    body: JSON.stringify(payload),
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) {
+    throw httpError(res.status, errorMessage(data, "Failed to enhance text with AI"));
+  }
+  return data;
+}
+
+export async function getGithubStatus(auth) {
+  const res = await fetch(`${API_URL}/github/status`, {
+    headers: authHeaders(auth),
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) {
+    return { connected: false };
+  }
+  return data;
+}
+
+export async function getGithubRepos(auth) {
+  const res = await fetch(`${API_URL}/github/repos`, {
+    headers: authHeaders(auth),
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) {
+    throw httpError(res.status, errorMessage(data, "Failed to fetch GitHub repositories"));
+  }
+  return data.repos || [];
+}
+
+export async function generateRepoReadme(auth, payload) {
+  const res = await fetch(`${API_URL}/github/generate-repo-readme`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...authHeaders(auth) },
+    body: JSON.stringify(payload),
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) {
+    throw httpError(res.status, errorMessage(data, "Failed to generate repository README"));
+  }
+  return data;
+}
+
+export async function commitRepoReadme(auth, payload) {
+  const res = await fetch(`${API_URL}/github/commit-repo-readme`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...authHeaders(auth) },
+    body: JSON.stringify(payload),
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) {
+    throw httpError(res.status, errorMessage(data, "Failed to commit README to repository"));
+  }
+  return data;
+}
+
+export async function generateArchitectureDiagram(auth, payload) {
+  const res = await fetch(`${API_URL}/career/generate-diagram`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...authHeaders(auth) },
+    body: JSON.stringify(payload),
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) {
+    throw httpError(res.status, errorMessage(data, "Failed to generate architecture diagram"));
+  }
+  return data;
+}
+
+export async function generateCoverLetter(auth, { file, sessionId, resumeText, jobDescription, companyName, candidateName, tone }) {
+  let res;
+  if (file) {
+    const formData = new FormData();
+    formData.append("resume", file);
+    formData.append("jobDescription", jobDescription);
+    if (companyName) formData.append("companyName", companyName);
+    if (candidateName) formData.append("candidateName", candidateName);
+    if (tone) formData.append("tone", tone);
+    res = await fetch(`${API_URL}/career/cover-letter`, {
+      method: "POST",
+      headers: authHeaders(auth),
+      body: formData,
+    });
+  } else {
+    res = await fetch(`${API_URL}/career/cover-letter`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", ...authHeaders(auth) },
+      body: JSON.stringify({ sessionId, resumeText, jobDescription, companyName, candidateName, tone }),
+    });
+  }
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) {
+    throw httpError(res.status, errorMessage(data, "Failed to generate cover letter"));
+  }
+  return data;
+}
+
+
+

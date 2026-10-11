@@ -5,6 +5,7 @@ node_modules/
 # Production Builds (built on deploy)
 dist/
 frontend/dist/
+*.md
 
 # Environment Secrets — NEVER commit
 .env
