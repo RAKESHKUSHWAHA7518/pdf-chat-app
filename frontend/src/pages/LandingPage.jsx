@@ -1,6 +1,6 @@
 import { useState, useRef } from "react";
 import { Link } from "react-router-dom";
-import { useAuth } from "../hooks/useAuth";
+import { useAuth } from "../hooks/authContext.js";
 
 const ELENA_IMG = "https://lh3.googleusercontent.com/aida-public/AB6AXuDqQliqZu1Yvw6_zYrMbPstYpEx8kJ0Rd34DOxfKAhMDCuo27E7sNNxVqqEAiZB6Wbc4h1EyYj2HTAlDRw6ShLV2CI7VoprJ2Ux8c4k2L_0_UrsuuykHeX8lwy4aWB-s0sIvSIvP2T_hVM4-y_U7Ru6JacHnJi0xcBOpM8VQGxogQsq4bU-R3gycso0Xf_gIpjSiEszG5TVol8wMvetd7kLkCEmk9VJrYGnvu4NrlWA";
 const MARCUS_IMG = "https://lh3.googleusercontent.com/aida-public/AB6AXuAN2nnJl780Ih3oNFlDh8TW1SHj72J630Sg_r77r_z8emKtsbo72szQnbyJvGTWjf83rTMshdVyRhwDvgQ2WNFffTaH3qPfaAk1BrT-s8yC6ZLEpHPTq6-IQQ0B3IzSoNENBawu5SpqNLyZObpYRKPWPFo9OsP0kC26Q6sOBiqNmGUhphpIfQ8MWcSVzdve1cLK8xiqWPvbtvnoW8hlHZAda5hpHJQ1bE-Ac_FM0J6C";
@@ -129,22 +129,22 @@ export function LandingPage() {
 
   const HERO_TABS = [
     { id: "pdf-chat", label: "PDF Intelligence", icon: "description", badge: "RAG Engine" },
-    { id: "github-studio", label: "GitHub Studio", icon: "code", badge: "Profile AI" },
+
     { id: "diagrams", label: "Architecture Studio", icon: "schema", badge: "Mermaid.js" },
     { id: "ats-matcher", label: "ATS Resume Matcher", icon: "track_changes", badge: "STAR AI" },
     { id: "repo-docs", label: "Repo Docs Gen", icon: "menu_book", badge: "Docs Gen" },
-    { id: "cover-letter", label: "Tailored Cover Letter", icon: "mail", badge: "Career AI" },
+
   ];
 
   return (
     <div className="w-full bg-surface-base text-on-surface font-body-md antialiased selection:bg-neon-indigo selection:text-text-primary min-h-screen overflow-x-hidden relative">
-      
+
       {/* ───────────────────────────────────────────────────────────── */}
       {/* HEADER / NAVIGATION                                          */}
       {/* ───────────────────────────────────────────────────────────── */}
       <header className="fixed top-0 w-full z-50 bg-surface-glass backdrop-blur-xl shadow-[0_1px_8px_rgba(0,0,0,0.4)] border-b border-glass-border/40">
         <div className="h-16 sm:h-20 max-w-[1280px] mx-auto px-4 sm:px-6 lg:px-8 flex items-center justify-between">
-          
+
           {/* Logo & Brand */}
           <Link to="/" className="flex items-center gap-2.5 sm:gap-3 group shrink-0">
             <Logo className="w-8 h-8 sm:w-9 sm:h-9 transition-transform group-hover:scale-105 shrink-0" />
@@ -240,7 +240,7 @@ export function LandingPage() {
       {/* MAIN CONTENT                                                  */}
       {/* ───────────────────────────────────────────────────────────── */}
       <main className="w-full pt-20 sm:pt-24 bg-surface-base overflow-x-hidden relative">
-        
+
         {/* Dynamic Atmospheric Glow Orbs (contained to prevent horizontal overflow) */}
         <div className="absolute inset-0 overflow-hidden pointer-events-none -z-10">
           <div className="absolute top-16 left-1/2 -translate-x-1/2 w-[800px] max-w-[100vw] h-[380px] bg-gradient-to-r from-neon-indigo/25 via-neon-violet/25 to-neon-fuchsia/20 blur-[140px] rounded-full"></div>
@@ -253,7 +253,7 @@ export function LandingPage() {
         {/* SECTION 1: HERO SECTION                                         */}
         {/* ============================================================== */}
         <section className="max-w-[1280px] mx-auto w-full px-4 sm:px-6 lg:px-8 pt-8 sm:pt-14 pb-16 flex flex-col items-center text-center">
-          
+
           {/* Announcement Badge */}
           <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-surface-container/90 backdrop-blur-md shadow-[inset_0_1px_1px_rgba(255,255,255,0.12)] border border-white/10 mb-6 transition-all hover:border-neon-indigo/50 cursor-default">
             <span className="w-2 h-2 rounded-full bg-neon-fuchsia animate-pulse"></span>
@@ -313,7 +313,7 @@ export function LandingPage() {
           {/* INTERACTIVE MULTI-TOOL HERO PLAYGROUND (THE SHOWSTOPPER)       */}
           {/* ───────────────────────────────────────────────────────────── */}
           <div className="w-full max-w-5xl flex flex-col items-center">
-            
+
             {/* Interactive Tab Switcher */}
             <div className="flex items-center justify-start sm:justify-center gap-1.5 sm:gap-2 p-1.5 rounded-2xl bg-surface-container/90 backdrop-blur-xl border border-glass-border mb-4 max-w-full overflow-x-auto scrollbar-none shadow-lg">
               {HERO_TABS.map((tab) => {
@@ -361,15 +361,13 @@ export function LandingPage() {
                     to={
                       activeHeroTab === "pdf-chat"
                         ? "/dashboard/chat-pdf"
-                        : activeHeroTab === "github-studio"
-                        ? "/dashboard/github-studio"
                         : activeHeroTab === "diagrams"
                         ? "/dashboard/diagrams"
                         : activeHeroTab === "ats-matcher"
                         ? "/dashboard/ats-matcher"
                         : activeHeroTab === "repo-docs"
                         ? "/dashboard/repo-docs"
-                        : "/dashboard/cover-letter"
+                        : "/dashboard/chat-pdf"
                     }
                     className="font-label-code text-xs px-2.5 py-1 rounded-lg bg-surface-container-high hover:bg-surface-variant text-neon-violet hover:text-text-primary transition-all flex items-center gap-1 font-semibold"
                   >
@@ -488,80 +486,9 @@ export function LandingPage() {
               )}
 
               {/* ───────────────────────────────────────────────────────── */}
-              {/* TAB 2: GITHUB STUDIO PREVIEW                             */}
+
               {/* ───────────────────────────────────────────────────────── */}
-              {activeHeroTab === "github-studio" && (
-                <div className="flex flex-col justify-between bg-surface-container-lowest/90 rounded-xl p-4 sm:p-6 h-[420px] sm:h-[460px] overflow-y-auto border border-white/5 space-y-4">
-                  <div className="space-y-4">
-                    <div className="flex items-center justify-between pb-3 border-b border-glass-border">
-                      <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-full bg-gradient-to-tr from-neon-indigo to-neon-violet flex items-center justify-center text-white font-bold text-sm">
-                          RK
-                        </div>
-                        <div>
-                          <div className="font-bold text-text-primary text-sm sm:text-base flex items-center gap-2">
-                            <span>Rakesh Kushwaha</span>
-                            <span className="text-[10px] px-2 py-0.5 rounded-full bg-success/20 text-success font-semibold">Pro</span>
-                          </div>
-                          <p className="text-xs text-text-muted font-mono">Senior Full-Stack &amp; AI Engineer</p>
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <span className="text-xs px-2.5 py-1 rounded-md bg-neon-violet/20 text-neon-violet font-semibold border border-neon-violet/30 hidden sm:inline-block">
-                          1-Click GitHub Push Ready
-                        </span>
-                      </div>
-                    </div>
 
-                    {/* Dynamic typewriter visual */}
-                    <div className="p-3.5 rounded-xl bg-surface-container-high/80 border border-white/5 space-y-2">
-                      <div className="flex items-center gap-2 text-xs font-mono text-text-muted">
-                        <span className="text-neon-fuchsia font-bold"># README.md Banner</span>
-                      </div>
-                      <div className="font-mono text-sm sm:text-base font-bold text-transparent bg-clip-text bg-gradient-to-r from-neon-indigo via-neon-violet to-neon-fuchsia">
-                        &gt; Architecting Distributed Microservices &amp; Agentic AI Systems_
-                      </div>
-                    </div>
-
-                    {/* Stats & Tech Stack badges simulation */}
-                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
-                      <div className="p-3 rounded-xl bg-surface-container/80 border border-white/5 text-center">
-                        <div className="text-xs text-text-muted">GitHub Stars</div>
-                        <div className="text-lg font-bold text-amber-400">1,420+ ⭐</div>
-                      </div>
-                      <div className="p-3 rounded-xl bg-surface-container/80 border border-white/5 text-center">
-                        <div className="text-xs text-text-muted">Total Commits</div>
-                        <div className="text-lg font-bold text-success">2,890+ 🔥</div>
-                      </div>
-                      <div className="p-3 rounded-xl bg-surface-container/80 border border-white/5 text-center">
-                        <div className="text-xs text-text-muted">PRs Merged</div>
-                        <div className="text-lg font-bold text-neon-indigo">340+ 🚀</div>
-                      </div>
-                      <div className="p-3 rounded-xl bg-surface-container/80 border border-white/5 text-center">
-                        <div className="text-xs text-text-muted">Global Rank</div>
-                        <div className="text-lg font-bold text-neon-fuchsia">Top 1% 🏆</div>
-                      </div>
-                    </div>
-
-                    {/* Tech Badges */}
-                    <div className="flex flex-wrap gap-1.5 pt-1">
-                      {["React", "Node.js", "TypeScript", "LangChain", "Gemini 2.5", "MongoDB Atlas", "Docker", "Kubernetes", "Redis"].map((tech) => (
-                        <span key={tech} className="px-2.5 py-1 rounded-md bg-surface-container text-xs font-mono text-text-secondary border border-white/5">
-                          {tech}
-                        </span>
-                      ))}
-                    </div>
-                  </div>
-
-                  <div className="flex items-center justify-between pt-3 border-t border-glass-border">
-                    <span className="text-xs text-text-muted">Includes animated typewriter, visitor counters &amp; streaks</span>
-                    <Link to="/dashboard/github-studio" className="px-4 py-2 rounded-lg bg-neon-violet hover:bg-neon-violet/90 text-white text-xs font-semibold flex items-center gap-1.5 shadow-md">
-                      <span>Launch Studio</span>
-                      <span className="material-symbols-outlined text-[16px]">arrow_forward</span>
-                    </Link>
-                  </div>
-                </div>
-              )}
 
               {/* ───────────────────────────────────────────────────────── */}
               {/* TAB 3: ARCHITECTURE DIAGRAMS PREVIEW                     */}
@@ -723,43 +650,9 @@ export function LandingPage() {
               )}
 
               {/* ───────────────────────────────────────────────────────── */}
-              {/* TAB 6: TAILORED COVER LETTER PREVIEW                     */}
+
               {/* ───────────────────────────────────────────────────────── */}
-              {activeHeroTab === "cover-letter" && (
-                <div className="flex flex-col justify-between bg-surface-container-lowest/90 rounded-xl p-4 sm:p-6 h-[420px] sm:h-[460px] overflow-y-auto border border-white/5 space-y-4">
-                  <div>
-                    <div className="flex items-center justify-between pb-3 border-b border-glass-border mb-3">
-                      <div>
-                        <div className="font-bold text-text-primary text-sm sm:text-base">
-                          Cover Letter for: Staff Engineer at OpenAI
-                        </div>
-                        <div className="text-xs text-text-muted font-mono">Tone: Confident &amp; Metric-Driven • Matched to Job Description</div>
-                      </div>
-                      <span className="text-xs px-2.5 py-1 rounded bg-neon-fuchsia/20 text-neon-fuchsia font-semibold font-mono">
-                        98% Job Fit
-                      </span>
-                    </div>
 
-                    <div className="p-4 rounded-xl bg-surface-container/70 border border-white/5 space-y-2 text-xs text-text-secondary leading-relaxed font-sans">
-                      <p className="text-text-primary font-semibold">Dear OpenAI Engineering Team,</p>
-                      <p>
-                        Having architected high-throughput RAG systems processing 50k+ daily document tokens with sub-second latency, I was immediately drawn to your mission of democratizing frontier AI.
-                      </p>
-                      <p>
-                        In my recent tenure, I spearheaded the distributed indexing architecture that cut vector retrieval costs by 45% while maintaining 99.4% citation accuracy. I would welcome the opportunity to bring this focus on engineering velocity to your developer platform.
-                      </p>
-                    </div>
-                  </div>
-
-                  <div className="flex items-center justify-between pt-3 border-t border-glass-border">
-                    <span className="text-xs text-text-muted">100% personalized based on your real resume experience</span>
-                    <Link to="/dashboard/cover-letter" className="px-4 py-2 rounded-lg bg-neon-fuchsia hover:bg-neon-fuchsia/90 text-white text-xs font-semibold flex items-center gap-1.5 shadow-md">
-                      <span>Generate Cover Letter</span>
-                      <span className="material-symbols-outlined text-[16px]">arrow_forward</span>
-                    </Link>
-                  </div>
-                </div>
-              )}
             </div>
           </div>
         </section>
@@ -774,7 +667,7 @@ export function LandingPage() {
               The Complete Developer AI Ecosystem
             </div>
             <h2 className="font-headline-xl text-2xl sm:text-4xl lg:text-5xl text-text-primary max-w-3xl leading-tight mb-4 font-extrabold">
-              Seven specialized AI workspaces. <br />
+              Document research and focused developer tools. <br />
               <span className="bg-gradient-to-r from-neon-indigo via-neon-violet to-neon-fuchsia bg-clip-text text-transparent">
                 One unified developer command center.
               </span>
@@ -786,7 +679,7 @@ export function LandingPage() {
 
           {/* 7 Workspaces Grid */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            
+
             {/* Tool 1: PDF Chat */}
             <Link to="/dashboard/chat-pdf" className="group rounded-2xl bg-surface-container/80 backdrop-blur-xl p-7 hover:bg-surface-container-high/90 transition-all duration-300 border border-glass-border/50 hover:border-neon-indigo/50 hover:-translate-y-1 shadow-lg flex flex-col justify-between">
               <div>
@@ -807,45 +700,6 @@ export function LandingPage() {
               </div>
             </Link>
 
-            {/* Tool 2: GitHub Profile Studio */}
-            <Link to="/dashboard/github-studio" className="group rounded-2xl bg-surface-container/80 backdrop-blur-xl p-7 hover:bg-surface-container-high/90 transition-all duration-300 border border-glass-border/50 hover:border-neon-violet/50 hover:-translate-y-1 shadow-lg flex flex-col justify-between">
-              <div>
-                <div className="w-12 h-12 rounded-xl bg-neon-violet/15 text-neon-violet flex items-center justify-center mb-5 group-hover:scale-105 transition-transform">
-                  <span className="material-symbols-outlined text-[24px]">code</span>
-                </div>
-                <div className="flex items-center justify-between mb-2">
-                  <h3 className="font-headline-sm text-lg text-text-primary font-bold">GitHub Profile Studio</h3>
-                  <span className="text-[10px] px-2 py-0.5 rounded-full bg-neon-violet/20 text-neon-violet font-bold">Popular</span>
-                </div>
-                <p className="font-body-sm text-body-sm text-text-secondary leading-relaxed">
-                  Build viral GitHub Profile READMEs with dynamic typewriter typing lines, badges, stats widgets, and 1-click GitHub push.
-                </p>
-              </div>
-              <div className="pt-5 mt-4 border-t border-white/5 flex items-center text-xs font-semibold text-neon-violet group-hover:translate-x-1 transition-transform">
-                <span>Launch Profile Studio</span>
-                <span className="material-symbols-outlined text-[16px] ml-1">arrow_forward</span>
-              </div>
-            </Link>
-
-            {/* Tool 3: Resume to README */}
-            <Link to="/dashboard/resume-to-readme" className="group rounded-2xl bg-surface-container/80 backdrop-blur-xl p-7 hover:bg-surface-container-high/90 transition-all duration-300 border border-glass-border/50 hover:border-neon-fuchsia/50 hover:-translate-y-1 shadow-lg flex flex-col justify-between">
-              <div>
-                <div className="w-12 h-12 rounded-xl bg-neon-fuchsia/15 text-neon-fuchsia flex items-center justify-center mb-5 group-hover:scale-105 transition-transform">
-                  <span className="material-symbols-outlined text-[24px]">badge</span>
-                </div>
-                <div className="flex items-center justify-between mb-2">
-                  <h3 className="font-headline-sm text-lg text-text-primary font-bold">Resume to README</h3>
-                  <span className="text-[10px] px-2 py-0.5 rounded-full bg-neon-fuchsia/20 text-neon-fuchsia font-bold">AI Bridge</span>
-                </div>
-                <p className="font-body-sm text-body-sm text-text-secondary leading-relaxed">
-                  Upload any PDF resume and instantly transform work experience, tech skills, and projects into a GitHub profile in seconds.
-                </p>
-              </div>
-              <div className="pt-5 mt-4 border-t border-white/5 flex items-center text-xs font-semibold text-neon-fuchsia group-hover:translate-x-1 transition-transform">
-                <span>Transform Resume</span>
-                <span className="material-symbols-outlined text-[16px] ml-1">arrow_forward</span>
-              </div>
-            </Link>
 
             {/* Tool 4: ATS Resume Matcher */}
             <Link to="/dashboard/ats-matcher" className="group rounded-2xl bg-surface-container/80 backdrop-blur-xl p-7 hover:bg-surface-container-high/90 transition-all duration-300 border border-glass-border/50 hover:border-amber-500/50 hover:-translate-y-1 shadow-lg flex flex-col justify-between">
@@ -907,29 +761,7 @@ export function LandingPage() {
               </div>
             </Link>
 
-            {/* Tool 7: AI Tailored Cover Letter */}
-            <Link to="/dashboard/cover-letter" className="group rounded-2xl bg-surface-container/80 backdrop-blur-xl p-7 hover:bg-surface-container-high/90 transition-all duration-300 border border-glass-border/50 hover:border-pink-500/50 hover:-translate-y-1 shadow-lg flex flex-col justify-between md:col-span-2 lg:col-span-3">
-              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-                <div className="flex items-start sm:items-center gap-4">
-                  <div className="w-12 h-12 rounded-xl bg-pink-500/15 text-pink-400 flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform">
-                    <span className="material-symbols-outlined text-[24px]">mail</span>
-                  </div>
-                  <div>
-                    <div className="flex items-center gap-2 mb-1">
-                      <h3 className="font-headline-sm text-lg text-text-primary font-bold">AI Tailored Cover Letter Generator</h3>
-                      <span className="text-[10px] px-2 py-0.5 rounded-full bg-pink-500/20 text-pink-300 font-bold">Career Tool</span>
-                    </div>
-                    <p className="font-body-sm text-body-sm text-text-secondary leading-relaxed max-w-2xl">
-                      Generate hyper-personalized, executive-ready cover letters aligned with specific job descriptions, your resume experience, and chosen tone.
-                    </p>
-                  </div>
-                </div>
-                <div className="flex items-center text-xs font-semibold text-pink-400 group-hover:translate-x-1 transition-transform whitespace-nowrap">
-                  <span>Create Cover Letter</span>
-                  <span className="material-symbols-outlined text-[16px] ml-1">arrow_forward</span>
-                </div>
-              </div>
-            </Link>
+
           </div>
         </section>
 
@@ -1065,7 +897,7 @@ export function LandingPage() {
                   ))}
                 </div>
                 <p className="font-body-md text-body-sm text-on-surface italic leading-relaxed mb-6">
-                  “GitHub Profile Studio + PDF Chat are daily drivers for me. I digest deep 80-page whitepapers during the day and keep my open-source profile looking like a top 1% engineer with zero manual maintenance.”
+                  “Inspect supporting passages, ask follow-up questions, and return to saved document conversations.”
                 </p>
               </div>
               <div className="flex items-center gap-3 pt-4 border-t border-white/5">
@@ -1125,7 +957,7 @@ export function LandingPage() {
 
           {/* Pricing Tiers Grid */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-stretch mb-12">
-            
+
             {/* Starter Plan */}
             <div className="rounded-2xl bg-surface-container/70 backdrop-blur-xl p-8 flex flex-col justify-between border border-glass-border/40 hover:-translate-y-1 transition-transform">
               <div>
@@ -1201,7 +1033,7 @@ export function LandingPage() {
                   </div>
                   <div className="flex items-center gap-2.5">
                     <span className="material-symbols-outlined text-neon-fuchsia text-[18px]">check_circle</span>
-                    <span>AI Cover Letter generator with tailored match</span>
+                    <span>Source-linked document answers and saved conversations</span>
                   </div>
                   <div className="flex items-center gap-2.5">
                     <span className="material-symbols-outlined text-neon-fuchsia text-[18px]">check_circle</span>
@@ -1284,10 +1116,10 @@ export function LandingPage() {
               <div className="text-xs uppercase font-bold text-text-muted tracking-wider mb-3">Workspaces</div>
               <ul className="space-y-2 text-xs text-text-secondary">
                 <li><Link className="hover:text-text-primary transition-colors" to="/dashboard/chat-pdf">PDF Chat &amp; Vault</Link></li>
-                <li><Link className="hover:text-text-primary transition-colors" to="/dashboard/github-studio">GitHub Profile Studio</Link></li>
+                <li></li>
                 <li><Link className="hover:text-text-primary transition-colors" to="/dashboard/ats-matcher">ATS Resume Matcher</Link></li>
                 <li><Link className="hover:text-text-primary transition-colors" to="/dashboard/diagrams">Architecture Studio</Link></li>
-                <li><Link className="hover:text-text-primary transition-colors" to="/dashboard/cover-letter">AI Cover Letter</Link></li>
+                <li></li>
               </ul>
             </div>
 

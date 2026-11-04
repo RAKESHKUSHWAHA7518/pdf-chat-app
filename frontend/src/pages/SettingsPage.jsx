@@ -14,7 +14,7 @@ import {
   ExternalLink
 } from "lucide-react";
 import { Github } from "../components/icons/Github";
-import { useAuth } from "../hooks/useAuth";
+import { useAuth } from "../hooks/authContext.js";
 import { useGithubIntegration } from "../hooks/useGithubIntegration";
 import { getCreditBalance } from "../api";
 import { Button, InteractiveCard, Badge } from "../components/ui";
@@ -28,7 +28,7 @@ export function SettingsPage() {
   const [showPricingModal, setShowPricingModal] = useState(false);
 
   // GitHub integration hook
-  const { status: ghStatus, loading: ghLoading, connectWithToken, disconnect } = useGithubIntegration(auth);
+  const { status: ghStatus, connectWithToken, disconnect } = useGithubIntegration(auth);
   const [patInput, setPatInput] = useState("");
   const [connectingGh, setConnectingGh] = useState(false);
   const [ghError, setGhError] = useState(null);
@@ -42,7 +42,7 @@ export function SettingsPage() {
     getCreditBalance(auth)
       .then(setBalance)
       .catch((e) => console.log("Balance fetch error:", e));
-  }, [auth, isAuthenticated]);
+  }, [auth, isAuthenticated, navigate]);
 
   const handleLogout = () => {
     logout();
@@ -174,7 +174,7 @@ export function SettingsPage() {
           </div>
 
           <p className="text-xs text-slate-400 mb-6 leading-relaxed">
-            Connect your GitHub account to enable 1-Click Publishing to your special profile repository (<code className="bg-slate-900 text-indigo-300 px-1 py-0.5 rounded font-mono">username/username</code>) directly from GitHub Studio and Resume-to-README.
+            Connect your GitHub account to inspect repositories and publish documentation from Repository Documentation.
           </p>
 
           {ghSuccess && (

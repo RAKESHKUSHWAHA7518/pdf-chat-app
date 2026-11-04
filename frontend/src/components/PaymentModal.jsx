@@ -26,12 +26,6 @@ export default function PaymentModal({ auth, onClose, onSuccess, type, item, use
 
   const effectiveEmail = userEmail || auth?.email || "customer@pdfchat.ai";
 
-  useEffect(() => {
-    if (type && item) {
-      createOrder();
-    }
-  }, [type, item]);
-
   const createOrder = async () => {
     setLoading(true);
     setError(null);
@@ -40,6 +34,7 @@ export default function PaymentModal({ auth, onClose, onSuccess, type, item, use
         ? await createCreditsOrder(auth, item.packId)
         : await createSubscriptionOrder(auth, item.planId);
       setOrderData(order);
+      return order;
     } catch (err) {
       setError(err.message || "Failed to create payment order");
     } finally {
@@ -47,19 +42,20 @@ export default function PaymentModal({ auth, onClose, onSuccess, type, item, use
     }
   };
 
-  const openRazorpayCheckout = () => {
-    if (!orderData) return;
+  const openRazorpayCheckout = async () => {
     if (!window.Razorpay) {
       setError("Payment gateway is initializing. Please click again in 2 seconds.");
       return;
     }
 
+    const currentOrder = orderData || await createOrder();
+    if (!currentOrder) return;
     const options = {
-      key: orderData.key,
+      key: currentOrder.key,
       name: "PDF Chat AI",
       description: type === "credits"
-        ? `Credit Pack: ${orderData.pack?.label || item.label}`
-        : `Pro Access: ${orderData.plan?.label || item.label}`,
+        ? `Credit Pack: ${currentOrder.pack?.label || item.label}`
+        : `Pro Access: ${currentOrder.plan?.label || item.label}`,
       prefill: { email: effectiveEmail },
       theme: { color: "#6366f1" },
       handler: async (response) => {
@@ -87,12 +83,12 @@ export default function PaymentModal({ auth, onClose, onSuccess, type, item, use
     };
 
     // Subscriptions use subscription_id without amount or order_id
-    if (orderData.subscriptionId && !orderData.orderId) {
-      options.subscription_id = orderData.subscriptionId;
+    if (currentOrder.subscriptionId && !currentOrder.orderId) {
+      options.subscription_id = currentOrder.subscriptionId;
     } else {
-      options.order_id = orderData.orderId;
-      options.amount = orderData.amount;
-      options.currency = orderData.currency || "INR";
+      options.order_id = currentOrder.orderId;
+      options.amount = currentOrder.amount;
+      options.currency = currentOrder.currency || "INR";
     }
 
     try {
@@ -157,7 +153,7 @@ export default function PaymentModal({ auth, onClose, onSuccess, type, item, use
         <button
           className="auth-submit-btn razorpay-btn"
           onClick={openRazorpayCheckout}
-          disabled={loading || !orderData}
+          disabled={loading}
         >
           {loading ? "Processing..." : `Pay ${item.price || (item.amount ? `₹${Math.round(item.amount / 100)}` : "")} with Razorpay`}
         </button>

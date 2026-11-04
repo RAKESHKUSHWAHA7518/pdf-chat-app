@@ -23,3 +23,6 @@ export const uploadLimiter = rateLimit({
   legacyHeaders: false,
   message: rateLimitMessage,
 });
+
+export const authLimiter = rateLimit({ windowMs: 15 * 60000, limit: 20, standardHeaders: true, legacyHeaders: false, message: rateLimitMessage });
+export const aiLimiter = rateLimit({ windowMs: 60000, limit: 10, standardHeaders: true, legacyHeaders: false, message: rateLimitMessage });

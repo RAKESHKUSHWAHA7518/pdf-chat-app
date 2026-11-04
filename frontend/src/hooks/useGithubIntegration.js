@@ -13,11 +13,11 @@ export function useGithubIntegration(auth) {
 
   const fetchStatus = useCallback(async () => {
     if (!auth?.token) {
-      setStatus({ connected: false, githubUsername: null, avatarUrl: null, loading: false });
       return;
     }
     try {
       const res = await fetch(`${API_URL}/github/status`, {
+        credentials: "include",
         headers: authHeaders(auth),
       });
       if (res.ok) {
@@ -32,12 +32,19 @@ export function useGithubIntegration(auth) {
   }, [auth]);
 
   useEffect(() => {
-    fetchStatus();
-  }, [fetchStatus]);
+    if (!auth?.token) return;
+    const controller = new AbortController();
+    fetch(API_URL + "/github/status", { headers: authHeaders(auth), credentials: "include", signal: controller.signal })
+      .then(response => response.ok ? response.json() : { connected: false })
+      .then(data => setStatus({ ...data, loading: false }))
+      .catch(error => { if (error.name !== "AbortError") setStatus({ connected: false, loading: false }); });
+    return () => controller.abort();
+  }, [auth]);
 
   const connectWithToken = async (patToken) => {
     setError(null);
     const res = await fetch(`${API_URL}/github/connect-token`, {
+        credentials: "include",
       method: "POST",
       headers: { ...authHeaders(auth), "Content-Type": "application/json" },
       body: JSON.stringify({ token: patToken }),
@@ -53,6 +60,7 @@ export function useGithubIntegration(auth) {
   const disconnect = async () => {
     setError(null);
     const res = await fetch(`${API_URL}/github/disconnect`, {
+        credentials: "include",
       method: "POST",
       headers: authHeaders(auth),
     });
@@ -61,25 +69,12 @@ export function useGithubIntegration(auth) {
     }
   };
 
-  const commitReadme = async (markdownContent) => {
-    const res = await fetch(`${API_URL}/github/commit-readme`, {
-      method: "POST",
-      headers: { ...authHeaders(auth), "Content-Type": "application/json" },
-      body: JSON.stringify({ markdownContent }),
-    });
-    const data = await res.json();
-    if (!res.ok) {
-      throw new Error(data?.error?.message || "Failed to commit README to GitHub");
-    }
-    return data;
-  };
 
   return {
-    status,
-    loading: status.loading,
+    status: auth?.token ? status : { connected: false, loading: false },
+    loading: Boolean(auth?.token) && status.loading,
     connectWithToken,
     disconnect,
-    commitReadme,
     refreshStatus: fetchStatus,
     error,
   };

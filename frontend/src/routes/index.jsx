@@ -1,36 +1,24 @@
+import { LandingPage, LoginPage, SignupPage, PricingPage, DocsPage, DocumentsPage, SettingsPage, AtsMatcher, RepoDocsPage, DiagramStudio, App } from "./lazyPages.jsx";
+import { Suspense } from "react";
 import { createBrowserRouter, Navigate } from "react-router-dom";
 import { AuthProvider } from "../hooks/useAuth.jsx";
 import { PublicLayout, AuthLayout, AppLayout } from "../components/layout/PageLayout";
 import { DashboardLayout } from "../components/layout/DashboardLayout";
-import { LandingPage } from "../pages/LandingPage";
-import { LoginPage } from "../pages/LoginPage";
-import { SignupPage } from "../pages/SignupPage";
-import { PricingPage } from "../pages/PricingPage";
-import { DocsPage } from "../pages/DocsPage";
-import { DocumentsPage } from "../pages/DocumentsPage";
-import { SettingsPage } from "../pages/SettingsPage";
-import { GithubStudio } from "../pages/GithubStudio";
-import { ResumeToReadme } from "../pages/ResumeToReadme";
-import { AtsMatcher } from "../pages/AtsMatcher";
-import { CoverLetterGenerator } from "../pages/CoverLetterGenerator";
-import { RepoDocsPage } from "../pages/RepoDocsPage";
-import { DiagramStudio } from "../pages/DiagramStudio";
-import App from "../App.jsx";
 
 export const router = createBrowserRouter([
   {
     path: "/",
     element: (
-      <AuthProvider>
+      <AuthProvider><Suspense fallback={<div role="status" className="p-8 text-slate-300">Loading…</div>}>
         <LandingPage />
-      </AuthProvider>
+      </Suspense></AuthProvider>
     ),
   },
   {
     element: (
-      <AuthProvider>
+      <AuthProvider><Suspense fallback={<div role="status" className="p-8 text-slate-300">Loading…</div>}>
         <PublicLayout />
-      </AuthProvider>
+      </Suspense></AuthProvider>
     ),
     children: [
       { path: "pricing", element: <PricingPage /> },
@@ -67,9 +55,9 @@ export const router = createBrowserRouter([
   },
   {
     element: (
-      <AuthProvider>
+      <AuthProvider><Suspense fallback={<div role="status" className="p-8 text-slate-300">Loading…</div>}>
         <AuthLayout />
-      </AuthProvider>
+      </Suspense></AuthProvider>
     ),
     children: [
       { path: "login", element: <LoginPage /> },
@@ -91,15 +79,15 @@ export const router = createBrowserRouter([
   {
     path: "/dashboard",
     element: (
-      <AuthProvider>
+      <AuthProvider><Suspense fallback={<div role="status" className="p-8 text-slate-300">Loading…</div>}>
         <DashboardLayout />
-      </AuthProvider>
+      </Suspense></AuthProvider>
     ),
     children: [
-      { index: true, element: <Navigate to="/dashboard/github-studio" replace /> },
-      { path: "github-studio", element: <GithubStudio /> },
-      { path: "resume-to-readme", element: <ResumeToReadme /> },
-      { path: "cover-letter", element: <CoverLetterGenerator /> },
+      { index: true, element: <Navigate to="/dashboard/chat-pdf" replace /> },
+      { path: "github-studio", element: <Navigate to="/dashboard/chat-pdf" replace /> },
+      { path: "resume-to-readme", element: <Navigate to="/dashboard/chat-pdf" replace /> },
+      { path: "cover-letter", element: <Navigate to="/dashboard/chat-pdf" replace /> },
       { path: "ats-matcher", element: <AtsMatcher /> },
       { path: "repo-docs", element: <RepoDocsPage /> },
       { path: "diagrams", element: <DiagramStudio /> },
@@ -111,9 +99,9 @@ export const router = createBrowserRouter([
   {
     path: "/settings",
     element: (
-      <AuthProvider>
+      <AuthProvider><Suspense fallback={<div role="status" className="p-8 text-slate-300">Loading…</div>}>
         <PublicLayout />
-      </AuthProvider>
+      </Suspense></AuthProvider>
     ),
     children: [
       { index: true, element: <SettingsPage /> },

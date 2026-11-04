@@ -1,7 +1,7 @@
 // src/pages/DiagramStudio.jsx — Architecture Diagram Studio (Prompt to Mermaid.js).
 import { useState, useEffect, useRef } from "react";
 import { useNavigate, useOutletContext } from "react-router-dom";
-import mermaid from "mermaid";
+import DOMPurify from "dompurify";
 import {
   Network,
   Sparkles,
@@ -18,16 +18,15 @@ import {
   ShieldCheck,
   Zap,
 } from "lucide-react";
-import { useAuth } from "../hooks/useAuth";
+import { useAuth } from "../hooks/authContext.js";
 import { generateArchitectureDiagram } from "../api";
 
-// Initialize mermaid
-mermaid.initialize({
+const mermaidConfig = {
   startOnLoad: false,
   theme: "dark",
-  securityLevel: "loose",
+  securityLevel: "strict",
   fontFamily: "Inter, sans-serif",
-});
+};
 
 const TEMPLATES = [
   {
@@ -59,7 +58,7 @@ export function DiagramStudio() {
 
   const [prompt, setPrompt] = useState("");
   const [diagramType, setDiagramType] = useState("architecture");
-  const [theme, setTheme] = useState("dark");
+  const [theme] = useState("dark");
 
   const [isGenerating, setIsGenerating] = useState(false);
   const [error, setError] = useState(null);
@@ -93,10 +92,12 @@ export function DiagramStudio() {
       }
 
       try {
+        const { default: mermaid } = await import("mermaid");
+        mermaid.initialize(mermaidConfig);
         const id = `mermaid-canvas-${Date.now()}`;
         const { svg } = await mermaid.render(id, mermaidCode.trim());
         if (!isCancelled) {
-          setSvgHtml(svg);
+          setSvgHtml(DOMPurify.sanitize(svg, { USE_PROFILES: { svg: true, svgFilters: true } }));
           setRenderError(null);
         }
       } catch (err) {

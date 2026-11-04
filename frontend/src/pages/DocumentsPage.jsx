@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { FileText, Search, Trash2, ArrowRight, Upload, Calendar, Clock, ArrowLeft } from "lucide-react";
-import { useAuth } from "../hooks/useAuth";
+import { useAuth } from "../hooks/authContext.js";
 import { listDocuments, deleteDocument } from "../api";
 import { Button, InteractiveCard, Input, Badge } from "../components/ui";
 
@@ -18,19 +18,12 @@ export function DocumentsPage() {
       navigate("/login");
       return;
     }
-    loadDocs();
-  }, [auth, isAuthenticated]);
-
-  const loadDocs = async () => {
-    try {
-      const docs = await listDocuments(auth);
-      setDocuments(docs || []);
-    } catch (err) {
-      console.error("Failed to load documents:", err);
-    } finally {
-      setLoading(false);
-    }
-  };
+    let cancelled = false;
+    listDocuments(auth).then(docs => { if (!cancelled) setDocuments(docs || []); })
+      .catch(err => console.error("Failed to load documents:", err))
+      .finally(() => { if (!cancelled) setLoading(false); });
+    return () => { cancelled = true; };
+  }, [auth, isAuthenticated, navigate]);
 
   const handleDelete = async (e, sessionId) => {
     e.stopPropagation();

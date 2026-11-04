@@ -1,0 +1,262 @@
+[
+  {
+    "id": "auth-0",
+    "question": "When do sessions expire?",
+    "expectedSourceIds": [
+      "auth"
+    ],
+    "expectedAnswer": "sessions expire after 30 minutes",
+    "category": "synthetic-answerable"
+  },
+  {
+    "id": "auth-1",
+    "question": "According to the document: When do sessions expire?",
+    "expectedSourceIds": [
+      "auth"
+    ],
+    "expectedAnswer": "sessions expire after 30 minutes",
+    "category": "synthetic-answerable"
+  },
+  {
+    "id": "auth-2",
+    "question": "Please explain: When do sessions expire?",
+    "expectedSourceIds": [
+      "auth"
+    ],
+    "expectedAnswer": "sessions expire after 30 minutes",
+    "category": "synthetic-answerable"
+  },
+  {
+    "id": "auth-3",
+    "question": "Find the policy: When do sessions expire?",
+    "expectedSourceIds": [
+      "auth"
+    ],
+    "expectedAnswer": "sessions expire after 30 minutes",
+    "category": "synthetic-answerable"
+  },
+  {
+    "id": "auth-4",
+    "question": "What does the documentation say? When do sessions expire?",
+    "expectedSourceIds": [
+      "auth"
+    ],
+    "expectedAnswer": "sessions expire after 30 minutes",
+    "category": "synthetic-answerable"
+  },
+  {
+    "id": "upload-0",
+    "question": "What is the PDF size limit?",
+    "expectedSourceIds": [
+      "upload"
+    ],
+    "expectedAnswer": "PDF uploads are limited to 10 MB",
+    "category": "synthetic-answerable"
+  },
+  {
+    "id": "upload-1",
+    "question": "According to the document: What is the PDF size limit?",
+    "expectedSourceIds": [
+      "upload"
+    ],
+    "expectedAnswer": "PDF uploads are limited to 10 MB",
+    "category": "synthetic-answerable"
+  },
+  {
+    "id": "upload-2",
+    "question": "Please explain: What is the PDF size limit?",
+    "expectedSourceIds": [
+      "upload"
+    ],
+    "expectedAnswer": "PDF uploads are limited to 10 MB",
+    "category": "synthetic-answerable"
+  },
+  {
+    "id": "upload-3",
+    "question": "Find the policy: What is the PDF size limit?",
+    "expectedSourceIds": [
+      "upload"
+    ],
+    "expectedAnswer": "PDF uploads are limited to 10 MB",
+    "category": "synthetic-answerable"
+  },
+  {
+    "id": "upload-4",
+    "question": "What does the documentation say? What is the PDF size limit?",
+    "expectedSourceIds": [
+      "upload"
+    ],
+    "expectedAnswer": "PDF uploads are limited to 10 MB",
+    "category": "synthetic-answerable"
+  },
+  {
+    "id": "billing-0",
+    "question": "What happens to credits if generation fails?",
+    "expectedSourceIds": [
+      "billing"
+    ],
+    "expectedAnswer": "failed generation reservations are refunded",
+    "category": "synthetic-answerable"
+  },
+  {
+    "id": "billing-1",
+    "question": "According to the document: What happens to credits if generation fails?",
+    "expectedSourceIds": [
+      "billing"
+    ],
+    "expectedAnswer": "failed generation reservations are refunded",
+    "category": "synthetic-answerable"
+  },
+  {
+    "id": "billing-2",
+    "question": "Please explain: What happens to credits if generation fails?",
+    "expectedSourceIds": [
+      "billing"
+    ],
+    "expectedAnswer": "failed generation reservations are refunded",
+    "category": "synthetic-answerable"
+  },
+  {
+    "id": "billing-3",
+    "question": "Find the policy: What happens to credits if generation fails?",
+    "expectedSourceIds": [
+      "billing"
+    ],
+    "expectedAnswer": "failed generation reservations are refunded",
+    "category": "synthetic-answerable"
+  },
+  {
+    "id": "billing-4",
+    "question": "What does the documentation say? What happens to credits if generation fails?",
+    "expectedSourceIds": [
+      "billing"
+    ],
+    "expectedAnswer": "failed generation reservations are refunded",
+    "category": "synthetic-answerable"
+  },
+  {
+    "id": "database-0",
+    "question": "Where are documents stored?",
+    "expectedSourceIds": [
+      "database"
+    ],
+    "expectedAnswer": "documents are stored in MongoDB",
+    "category": "synthetic-answerable"
+  },
+  {
+    "id": "database-1",
+    "question": "According to the document: Where are documents stored?",
+    "expectedSourceIds": [
+      "database"
+    ],
+    "expectedAnswer": "documents are stored in MongoDB",
+    "category": "synthetic-answerable"
+  },
+  {
+    "id": "database-2",
+    "question": "Please explain: Where are documents stored?",
+    "expectedSourceIds": [
+      "database"
+    ],
+    "expectedAnswer": "documents are stored in MongoDB",
+    "category": "synthetic-answerable"
+  },
+  {
+    "id": "database-3",
+    "question": "Find the policy: Where are documents stored?",
+    "expectedSourceIds": [
+      "database"
+    ],
+    "expectedAnswer": "documents are stored in MongoDB",
+    "category": "synthetic-answerable"
+  },
+  {
+    "id": "database-4",
+    "question": "What does the documentation say? Where are documents stored?",
+    "expectedSourceIds": [
+      "database"
+    ],
+    "expectedAnswer": "documents are stored in MongoDB",
+    "category": "synthetic-answerable"
+  },
+  {
+    "id": "support-0",
+    "question": "When is support available?",
+    "expectedSourceIds": [
+      "support"
+    ],
+    "expectedAnswer": "support is available Monday to Friday",
+    "category": "synthetic-answerable"
+  },
+  {
+    "id": "support-1",
+    "question": "According to the document: When is support available?",
+    "expectedSourceIds": [
+      "support"
+    ],
+    "expectedAnswer": "support is available Monday to Friday",
+    "category": "synthetic-answerable"
+  },
+  {
+    "id": "support-2",
+    "question": "Please explain: When is support available?",
+    "expectedSourceIds": [
+      "support"
+    ],
+    "expectedAnswer": "support is available Monday to Friday",
+    "category": "synthetic-answerable"
+  },
+  {
+    "id": "support-3",
+    "question": "Find the policy: When is support available?",
+    "expectedSourceIds": [
+      "support"
+    ],
+    "expectedAnswer": "support is available Monday to Friday",
+    "category": "synthetic-answerable"
+  },
+  {
+    "id": "support-4",
+    "question": "What does the documentation say? When is support available?",
+    "expectedSourceIds": [
+      "support"
+    ],
+    "expectedAnswer": "support is available Monday to Friday",
+    "category": "synthetic-answerable"
+  },
+  {
+    "id": "absent-0",
+    "question": "What is the CEO salary?",
+    "expectedSourceIds": [],
+    "expectedAnswer": "Insufficient evidence",
+    "category": "synthetic-unanswerable"
+  },
+  {
+    "id": "absent-1",
+    "question": "Which hospital is covered?",
+    "expectedSourceIds": [],
+    "expectedAnswer": "Insufficient evidence",
+    "category": "synthetic-unanswerable"
+  },
+  {
+    "id": "absent-2",
+    "question": "What is the stock price?",
+    "expectedSourceIds": [],
+    "expectedAnswer": "Insufficient evidence",
+    "category": "synthetic-unanswerable"
+  },
+  {
+    "id": "absent-3",
+    "question": "Who won the election?",
+    "expectedSourceIds": [],
+    "expectedAnswer": "Insufficient evidence",
+    "category": "synthetic-unanswerable"
+  },
+  {
+    "id": "absent-4",
+    "question": "What is the production uptime guarantee?",
+    "expectedSourceIds": [],
+    "expectedAnswer": "Insufficient evidence",
+    "category": "synthetic-unanswerable"
+  }
+]

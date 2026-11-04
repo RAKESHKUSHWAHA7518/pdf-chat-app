@@ -1,4 +1,5 @@
 // src/routes/auth.routes.js — Signup, login, and current-user endpoints.
+import { authLimiter } from "../middleware/rateLimiter.js";
 import { Router } from "express";
 import { z } from "zod";
 
@@ -19,7 +20,7 @@ const credentialsSchema = z.object({
 export const authRouter = Router();
 
 // POST /api/auth/signup or /api/auth/register — Create account, returns JWT
-authRouter.post(["/signup", "/register"], validate(credentialsSchema), async (req, res, next) => {
+authRouter.post(["/signup", "/register"], authLimiter, validate(credentialsSchema), async (req, res, next) => {
   try {
     const { email, password } = req.body;
     res.status(201).json(await signup(email, password));
