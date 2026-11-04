@@ -9,23 +9,26 @@ import { logger } from "../lib/logger.js";
 const genAI = new GoogleGenerativeAI(env.GEMINI_API_KEY);
 
 // Derive 32-byte encryption key from JWT_SECRET for AES-256-CBC
-const ENCRYPTION_KEY = crypto.createHash("sha256").update(env.JWT_SECRET).digest();
-const IV_LENGTH = 16;
+const ENCRYPTION_KEY = env.GITHUB_TOKEN_KEY ? Buffer.from(env.GITHUB_TOKEN_KEY, "hex") : null;
+
 
 function encryptToken(plainText) {
-  const iv = crypto.randomBytes(IV_LENGTH);
-  const cipher = crypto.createCipheriv("aes-256-cbc", ENCRYPTION_KEY, iv);
+  if (!ENCRYPTION_KEY) throw new ApiError(503, "GITHUB_NOT_CONFIGURED", "GitHub encryption key is not configured");
+  const iv = crypto.randomBytes(12);
+  const cipher = crypto.createCipheriv("aes-256-gcm", ENCRYPTION_KEY, iv);
   let encrypted = cipher.update(plainText, "utf8", "hex");
   encrypted += cipher.final("hex");
-  return `${iv.toString("hex")}:${encrypted}`;
+  return `v2:${iv.toString("hex")}:${cipher.getAuthTag().toString("hex")}:${encrypted}`;
 }
 
 function decryptToken(encryptedText) {
   if (!encryptedText) return null;
-  const [ivHex, cipherHex] = encryptedText.split(":");
+  if (!ENCRYPTION_KEY || !encryptedText.startsWith("v2:")) throw new ApiError(409, "GITHUB_RECONNECT_REQUIRED", "Please reconnect GitHub after the security update");
+  const [, ivHex, tagHex, cipherHex] = encryptedText.split(":");
   if (!ivHex || !cipherHex) return null;
   const iv = Buffer.from(ivHex, "hex");
   const decipher = crypto.createDecipheriv("aes-256-cbc", ENCRYPTION_KEY, iv);
+  decipher.setAuthTag(Buffer.from(tagHex, "hex"));
   let decrypted = decipher.update(cipherHex, "hex", "utf8");
   decrypted += decipher.final("utf8");
   return decrypted;
@@ -35,11 +38,12 @@ function decryptToken(encryptedText) {
 export async function getGithubStatus(userId) {
   const user = await collections.users().findOne(
     { _id: userId },
-    { projection: { githubUsername: 1, githubAvatar: 1, githubConnectedAt: 1 } }
+    { projection: { githubUsername: 1, githubAvatar: 1, githubConnectedAt: 1, githubToken: 1 } }
   );
 
   return {
-    connected: Boolean(user?.githubUsername),
+    connected: Boolean(user?.githubUsername && user?.githubToken?.startsWith("v2:") && env.GITHUB_TOKEN_KEY),
+    reconnectRequired: Boolean(user?.githubToken && !user.githubToken.startsWith("v2:")),
     githubUsername: user?.githubUsername || null,
     avatarUrl: user?.githubAvatar || null,
     connectedAt: user?.githubConnectedAt || null,
@@ -48,6 +52,7 @@ export async function getGithubStatus(userId) {
 
 /** Link GitHub account using a Personal Access Token (PAT) */
 export async function linkGithubWithToken(userId, token) {
+  if (!ENCRYPTION_KEY) throw new ApiError(503, "GITHUB_NOT_CONFIGURED", "GitHub encryption key is not configured");
   const cleanToken = token.trim();
   const octokit = new Octokit({ auth: cleanToken });
 
@@ -96,102 +101,7 @@ export async function unlinkGithub(userId) {
 }
 
 /** Publish/Commit README.md to username/username special repository */
-export async function commitProfileReadme(userId, markdownContent) {
-  if (!markdownContent || typeof markdownContent !== "string") {
-    throw new ApiError(400, "INVALID_CONTENT", "Markdown content is required");
-  }
 
-  const user = await collections.users().findOne({ _id: userId });
-  if (!user || !user.githubToken || !user.githubUsername) {
-    throw new ApiError(400, "GITHUB_NOT_CONNECTED", "GitHub account is not connected. Please connect your GitHub account first.");
-  }
-
-  const token = decryptToken(user.githubToken);
-  if (!token) {
-    throw new ApiError(500, "TOKEN_DECRYPTION_FAILED", "Failed to retrieve GitHub credentials. Please reconnect your account.");
-  }
-
-  const octokit = new Octokit({ auth: token });
-  const username = user.githubUsername;
-  const repoName = username; // GitHub special profile repository name is identical to username
-  const path = "README.md";
-
-  // 1. Verify if username/username repository exists; if not, create it as public
-  let repoExists = true;
-  try {
-    await octokit.rest.repos.get({ owner: username, repo: repoName });
-  } catch (err) {
-    if (err.status === 404) {
-      repoExists = false;
-    } else {
-      throw new ApiError(err.status || 500, "GITHUB_API_ERROR", err.message);
-    }
-  }
-
-  if (!repoExists) {
-    try {
-      logger.info({ username, repoName }, "Creating special profile repository");
-      await octokit.rest.repos.createForAuthenticatedUser({
-        name: repoName,
-        description: `${username}'s GitHub Profile README`,
-        auto_init: true,
-        private: false, // Profile repos MUST be public to display on GitHub profile
-      });
-      // Short delay for GitHub repository provisioning
-      await new Promise((resolve) => setTimeout(resolve, 2000));
-    } catch (err) {
-      logger.error({ err: err.message }, "Failed to create profile repository");
-      throw new ApiError(500, "REPO_CREATION_FAILED", `Could not initialize repository '${repoName}': ${err.message}`);
-    }
-  }
-
-  // 2. Fetch existing README.md SHA if it exists
-  let sha;
-  try {
-    const existingFile = await octokit.rest.repos.getContent({
-      owner: username,
-      repo: repoName,
-      path,
-    });
-    sha = existingFile.data?.sha;
-  } catch (err) {
-    if (err.status !== 404) {
-      logger.warn({ err: err.message }, "Error inspecting existing README.md SHA");
-    }
-  }
-
-  // 3. Commit README.md (Base64 encoded)
-  try {
-    const contentEncoded = Buffer.from(markdownContent, "utf-8").toString("base64");
-    const commitResult = await octokit.rest.repos.createOrUpdateFileContents({
-      owner: username,
-      repo: repoName,
-      path,
-      message: "✨ Update GitHub Profile README via DevSuite Studio",
-      content: contentEncoded,
-      sha, // If defined, updates; if undefined, creates
-      committer: {
-        name: "DevSuite Studio",
-        email: "studio@devsuite.ai",
-      },
-    });
-
-    logger.info({ username, commitSha: commitResult.data.commit.sha }, "Profile README committed successfully");
-
-    return {
-      success: true,
-      commitSha: commitResult.data.commit.sha,
-      profileUrl: `https://github.com/${username}`,
-      rawUrl: commitResult.data.content?.html_url || `https://github.com/${username}/${repoName}/blob/main/README.md`,
-    };
-  } catch (err) {
-    logger.error({ err: err.message }, "Failed to commit README to GitHub");
-    if (err.status === 409) {
-      throw new ApiError(409, "GITHUB_CONFLICT", "Conflict detected. The README was modified elsewhere on GitHub. Please retry.");
-    }
-    throw new ApiError(err.status || 500, "GITHUB_COMMIT_FAILED", err.message || "Failed to commit README to GitHub.");
-  }
-}
 
 /** Parses GitHub URL into owner and repository name */
 export function parseGithubUrl(raw) {
@@ -361,7 +271,7 @@ Tone: ${tone}.
 IMPORTANT: Output ONLY the complete raw Markdown for README.md. Do not include markdown code block backticks (\`\`\`markdown) wrapping the entire response. Start directly with the title / shields.`;
 
   try {
-    const result = await model.generateContent(prompt);
+    const result = await model.generateContent(prompt, { timeout: env.AI_TIMEOUT_MS });
     let markdown = result.response.text();
     // Clean up if model wrapped with ```markdown ... ```
     if (markdown.startsWith("```markdown")) {

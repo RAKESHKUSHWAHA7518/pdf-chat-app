@@ -62,6 +62,7 @@ documentRouter.post("/documents/:sessionId/open", requireAuth, async (req, res, 
       fileName: doc.fileName,
       pageCount: doc.pageCount,
       chunkCount: doc.chunkCount,
+      history: doc.history || [],
       restored: true,
       message: `Restored "${doc.fileName}" — ready to chat.`,
     });

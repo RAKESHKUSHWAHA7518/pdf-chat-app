@@ -1,6 +1,9 @@
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&family=Plus+Jakarta+Sans:wght@600;700;800&display=swap');
 @import './styles/tokens.css';
 @import './styles/animations.css';
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
 
 .material-symbols-outlined {
   font-family: 'Material Symbols Outlined';
@@ -125,3 +128,12 @@ body {
     scroll-behavior: auto !important;
   }
 }
+
+
+      @layer base {
+        html, body { margin: 0; padding: 0; }
+        body { overscroll-behavior: none; }
+        main > :first-child { margin-top: 0 !important; }
+        main > :last-child { margin-bottom: 0 !important; }
+      }
+      ::-webkit-scrollbar { display: none; }

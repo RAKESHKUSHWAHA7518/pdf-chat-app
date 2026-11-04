@@ -38,10 +38,8 @@ export default function PricingPage({ auth, onClose }) {
   const [paymentModal, setPaymentModal] = useState(null);
 
   useEffect(() => {
-    fetchPricing();
-  }, [auth]);
-
-  const fetchPricing = async () => {
+    let cancelled = false;
+    const fetchPricing = async () => {
     try {
       const [packsData, plansData] = await Promise.all([
         getCreditPacks(auth),
@@ -60,6 +58,7 @@ export default function PricingPage({ auth, onClose }) {
             ? Object.entries(plansData).map(([planId, p]) => ({ ...p, planId }))
             : []);
 
+      if (cancelled) return;
       setPacks(normalizedPacks);
       setPlans(normalizedPlans);
     } catch (err) {
@@ -74,9 +73,12 @@ export default function PricingPage({ auth, onClose }) {
         { planId: "pro_yearly", label: "Pro Yearly", price: "₹2,990/yr", interval: "yearly" },
       ]);
     } finally {
-      setLoading(false);
+      if (!cancelled) setLoading(false);
     }
-  };
+    };
+    fetchPricing();
+    return () => { cancelled = true; };
+  }, [auth]);
 
   const getPackPrice = (pack) => {
     if (pack.price) return pack.price;

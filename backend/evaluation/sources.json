@@ -1,0 +1,22 @@
+[
+  {
+    "id": "auth",
+    "text": "sessions expire after 30 minutes"
+  },
+  {
+    "id": "upload",
+    "text": "PDF uploads are limited to 10 MB"
+  },
+  {
+    "id": "billing",
+    "text": "failed generation reservations are refunded"
+  },
+  {
+    "id": "database",
+    "text": "documents are stored in MongoDB"
+  },
+  {
+    "id": "support",
+    "text": "support is available Monday to Friday"
+  }
+]

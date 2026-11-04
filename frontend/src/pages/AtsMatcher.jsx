@@ -22,8 +22,8 @@ import {
   ChevronRight,
   Download,
 } from "lucide-react";
-import { useAuth } from "../hooks/useAuth";
-import { listDocuments, scanResumeAts, getCreditBalance } from "../api";
+import { useAuth } from "../hooks/authContext.js";
+import { listDocuments, scanResumeAts } from "../api";
 import { Button, InteractiveCard, Badge } from "../components/ui";
 
 const SAMPLE_JDS = {
@@ -79,7 +79,7 @@ export function AtsMatcher() {
   const [inputMode, setInputMode] = useState("upload");
   const [documents, setDocuments] = useState([]);
   const [selectedSessionId, setSelectedSessionId] = useState("");
-  const [loadingDocs, setLoadingDocs] = useState(false);
+  const [loadingDocs, setLoadingDocs] = useState(isAuthenticated);
 
   // Resume file / text state
   const [file, setFile] = useState(null);
@@ -101,7 +101,6 @@ export function AtsMatcher() {
   // Load user docs
   useEffect(() => {
     if (isAuthenticated) {
-      setLoadingDocs(true);
       listDocuments(auth)
         .then((docs) => {
           setDocuments(docs || []);

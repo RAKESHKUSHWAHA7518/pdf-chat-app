@@ -7,7 +7,7 @@ import { useState, useEffect, useRef } from "react";
 export function useInView(options = {}) {
   const { threshold = 0.15, once = true } = options;
   const ref = useRef(null);
-  const [isInView, setIsInView] = useState(false);
+  const [isInView, setIsInView] = useState(() => !("IntersectionObserver" in window));
 
   useEffect(() => {
     const el = ref.current;
@@ -15,7 +15,6 @@ export function useInView(options = {}) {
 
     // Fallback if browser doesn't support IntersectionObserver
     if (!("IntersectionObserver" in window)) {
-      setIsInView(true);
       return;
     }
 

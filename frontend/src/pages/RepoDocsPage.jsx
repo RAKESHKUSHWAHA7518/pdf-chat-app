@@ -1,9 +1,7 @@
 // src/pages/RepoDocsPage.jsx — GitHub Repo to README Generator & Docs Studio.
 import { useState, useEffect } from "react";
 import { useNavigate, useOutletContext } from "react-router-dom";
-import ReactMarkdown from "react-markdown";
-import remarkGfm from "remark-gfm";
-import rehypeRaw from "rehype-raw";
+import SafeMarkdown from "../components/ui/SafeMarkdown.js";
 import {
   BookOpen,
   Sparkles,
@@ -24,7 +22,7 @@ import {
   CheckCircle2,
 } from "lucide-react";
 import { Github } from "../components/icons/Github.jsx";
-import { useAuth } from "../hooks/useAuth";
+import { useAuth } from "../hooks/authContext.js";
 import {
   generateRepoReadme,
   commitRepoReadme,
@@ -50,7 +48,7 @@ export function RepoDocsPage() {
 
   // GitHub user repo picker
   const [userRepos, setUserRepos] = useState([]);
-  const [loadingUserRepos, setLoadingUserRepos] = useState(false);
+  const [, setLoadingUserRepos] = useState(false);
   const [githubConnected, setGithubConnected] = useState(false);
 
   // Generation state
@@ -457,9 +455,9 @@ export function RepoDocsPage() {
               <>
                 {activeTab === "preview" ? (
                   <div className="prose prose-invert prose-indigo max-w-none text-slate-200 text-sm leading-relaxed space-y-4">
-                    <ReactMarkdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeRaw]}>
+                    <SafeMarkdown>
                       {markdown}
-                    </ReactMarkdown>
+                    </SafeMarkdown>
                   </div>
                 ) : (
                   <textarea

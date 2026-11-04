@@ -2,35 +2,24 @@
 import { useEffect, useState } from "react";
 import { getCreditBalance } from "../api.js";
 
-export default function CreditBalance({ auth, onBalanceChange, refreshTrigger, onRefresh }) {
+export default function CreditBalance({ auth, onBalanceChange, refreshTrigger }) {
   const [balance, setBalance] = useState(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (auth) {
-      fetchBalance();
-    } else {
-      setBalance(null);
-      onBalanceChange?.(null);
+    if (!auth) return;
+    let cancelled = false;
+    const controller = new AbortController();
+    async function fetchBalance() {
+      try {
+        const data = await getCreditBalance(auth);
+        if (!cancelled) { setBalance(data); onBalanceChange?.(data); }
+      } catch (err) { if (!cancelled) console.warn("Balance fetch:", err.message); }
+      finally { if (!cancelled) setLoading(false); }
     }
-  }, [auth, refreshTrigger]);
-
-  const fetchBalance = async (retries = 2) => {
-    setLoading(true);
-    try {
-      const data = await getCreditBalance(auth);
-      setBalance(data);
-      onBalanceChange?.(data);
-    } catch (err) {
-      if (retries > 0 && (err.status === 502 || err.status === 504 || err.message?.includes("starting up"))) {
-        setTimeout(() => fetchBalance(retries - 1), 1500);
-        return;
-      }
-      console.warn("Balance fetch:", err?.message || err);
-    } finally {
-      setLoading(false);
-    }
-  };
+    fetchBalance();
+    return () => { cancelled = true; controller.abort(); };
+  }, [auth, refreshTrigger, onBalanceChange]);
 
   if (!auth) return null;
 

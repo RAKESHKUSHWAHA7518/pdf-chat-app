@@ -1,15 +1,9 @@
 // src/api.js — API client helpers: base URL, auth/guest identity, error normalization.
 export const API_URL = (import.meta.env.VITE_API_URL || "").replace(/\/$/, "") + "/api";
 
-// ── Guest identity (stable UUID kept in localStorage) ──
-export function getGuestId() {
-  let id = localStorage.getItem("guestId");
-  if (!id) {
-    id = crypto.randomUUID();
-    localStorage.setItem("guestId", id);
-  }
-  return id;
-}
+export function apiFetch(url, options = {}) { return fetch(url, { credentials: "include", ...options }); }
+
+// Guest identity is an HttpOnly cookie issued by the server.
 
 // ── Auth token persistence ──
 export function getStoredAuth() {
@@ -32,7 +26,7 @@ export function clearAuth() {
 export function authHeaders(auth) {
   return auth
     ? { Authorization: `Bearer ${auth.token}` }
-    : { "x-guest-id": getGuestId() };
+    : {};
 }
 
 /** Normalize the backend error format: { error: { code, message } }. */
@@ -47,7 +41,7 @@ export function errorCode(data) {
 
 // ── Auth endpoints ──
 async function callAuth(path, body) {
-  const res = await fetch(`${API_URL}/auth${path}`, {
+  const res = await apiFetch(`${API_URL}/auth${path}`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(body),
@@ -74,7 +68,7 @@ function httpError(status, message) {
 }
 
 async function callApi(path, auth, options = {}) {
-  const res = await fetch(`${API_URL}${path}`, {
+  const res = await apiFetch(`${API_URL}${path}`, {
     headers: { "Content-Type": "application/json", ...authHeaders(auth) },
     ...options,
   });
@@ -133,29 +127,7 @@ export const getCreditTransactions = (auth) =>
   callApi("/payments/transactions", auth).then((d) => d.transactions);
 
 // ── Career & Resume Intelligence ──
-export async function synthesizeResumeToReadme(auth, { file, sessionId, resumeText }) {
-  let res;
-  if (file) {
-    const formData = new FormData();
-    formData.append("resume", file);
-    res = await fetch(`${API_URL}/career/resume-to-readme`, {
-      method: "POST",
-      headers: authHeaders(auth),
-      body: formData,
-    });
-  } else {
-    res = await fetch(`${API_URL}/career/resume-to-readme`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json", ...authHeaders(auth) },
-      body: JSON.stringify({ sessionId, resumeText }),
-    });
-  }
-  const data = await res.json().catch(() => ({}));
-  if (!res.ok) {
-    throw httpError(res.status, errorMessage(data, "Failed to synthesize resume"));
-  }
-  return data;
-}
+
 
 export async function scanResumeAts(auth, { file, sessionId, resumeText, jobDescription }) {
   let res;
@@ -163,13 +135,13 @@ export async function scanResumeAts(auth, { file, sessionId, resumeText, jobDesc
     const formData = new FormData();
     formData.append("resume", file);
     formData.append("jobDescription", jobDescription);
-    res = await fetch(`${API_URL}/career/ats-scan`, {
+    res = await apiFetch(`${API_URL}/career/ats-scan`, {
       method: "POST",
       headers: authHeaders(auth),
       body: formData,
     });
   } else {
-    res = await fetch(`${API_URL}/career/ats-scan`, {
+    res = await apiFetch(`${API_URL}/career/ats-scan`, {
       method: "POST",
       headers: { "Content-Type": "application/json", ...authHeaders(auth) },
       body: JSON.stringify({ sessionId, resumeText, jobDescription }),
@@ -182,34 +154,9 @@ export async function scanResumeAts(auth, { file, sessionId, resumeText, jobDesc
   return data;
 }
 
-export async function generateProfileAi(auth, payload) {
-  const res = await fetch(`${API_URL}/career/generate-profile-ai`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json", ...authHeaders(auth) },
-    body: JSON.stringify(payload),
-  });
-  const data = await res.json().catch(() => ({}));
-  if (!res.ok) {
-    throw httpError(res.status, errorMessage(data, "Failed to generate profile with AI"));
-  }
-  return data.profile;
-}
-
-export async function enhanceBioAi(auth, payload) {
-  const res = await fetch(`${API_URL}/career/enhance-bio-ai`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json", ...authHeaders(auth) },
-    body: JSON.stringify(payload),
-  });
-  const data = await res.json().catch(() => ({}));
-  if (!res.ok) {
-    throw httpError(res.status, errorMessage(data, "Failed to enhance text with AI"));
-  }
-  return data;
-}
 
 export async function getGithubStatus(auth) {
-  const res = await fetch(`${API_URL}/github/status`, {
+  const res = await apiFetch(`${API_URL}/github/status`, {
     headers: authHeaders(auth),
   });
   const data = await res.json().catch(() => ({}));
@@ -220,7 +167,7 @@ export async function getGithubStatus(auth) {
 }
 
 export async function getGithubRepos(auth) {
-  const res = await fetch(`${API_URL}/github/repos`, {
+  const res = await apiFetch(`${API_URL}/github/repos`, {
     headers: authHeaders(auth),
   });
   const data = await res.json().catch(() => ({}));
@@ -231,7 +178,7 @@ export async function getGithubRepos(auth) {
 }
 
 export async function generateRepoReadme(auth, payload) {
-  const res = await fetch(`${API_URL}/github/generate-repo-readme`, {
+  const res = await apiFetch(`${API_URL}/github/generate-repo-readme`, {
     method: "POST",
     headers: { "Content-Type": "application/json", ...authHeaders(auth) },
     body: JSON.stringify(payload),
@@ -244,7 +191,7 @@ export async function generateRepoReadme(auth, payload) {
 }
 
 export async function commitRepoReadme(auth, payload) {
-  const res = await fetch(`${API_URL}/github/commit-repo-readme`, {
+  const res = await apiFetch(`${API_URL}/github/commit-repo-readme`, {
     method: "POST",
     headers: { "Content-Type": "application/json", ...authHeaders(auth) },
     body: JSON.stringify(payload),
@@ -257,7 +204,7 @@ export async function commitRepoReadme(auth, payload) {
 }
 
 export async function generateArchitectureDiagram(auth, payload) {
-  const res = await fetch(`${API_URL}/career/generate-diagram`, {
+  const res = await apiFetch(`${API_URL}/career/generate-diagram`, {
     method: "POST",
     headers: { "Content-Type": "application/json", ...authHeaders(auth) },
     body: JSON.stringify(payload),
@@ -268,34 +215,3 @@ export async function generateArchitectureDiagram(auth, payload) {
   }
   return data;
 }
-
-export async function generateCoverLetter(auth, { file, sessionId, resumeText, jobDescription, companyName, candidateName, tone }) {
-  let res;
-  if (file) {
-    const formData = new FormData();
-    formData.append("resume", file);
-    formData.append("jobDescription", jobDescription);
-    if (companyName) formData.append("companyName", companyName);
-    if (candidateName) formData.append("candidateName", candidateName);
-    if (tone) formData.append("tone", tone);
-    res = await fetch(`${API_URL}/career/cover-letter`, {
-      method: "POST",
-      headers: authHeaders(auth),
-      body: formData,
-    });
-  } else {
-    res = await fetch(`${API_URL}/career/cover-letter`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json", ...authHeaders(auth) },
-      body: JSON.stringify({ sessionId, resumeText, jobDescription, companyName, candidateName, tone }),
-    });
-  }
-  const data = await res.json().catch(() => ({}));
-  if (!res.ok) {
-    throw httpError(res.status, errorMessage(data, "Failed to generate cover letter"));
-  }
-  return data;
-}
-
-
-

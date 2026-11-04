@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { Outlet } from "react-router-dom";
 import { Sidebar } from "../dashboard/Sidebar";
-import { useAuth } from "../../hooks/useAuth";
+import { useAuth } from "../../hooks/authContext.js";
 import { useGithubIntegration } from "../../hooks/useGithubIntegration";
 import { getCreditBalance } from "../../api";
 import PricingPage from "../PricingPage.jsx";
