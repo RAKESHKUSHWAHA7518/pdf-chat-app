@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { Check, Sparkles, HelpCircle, ArrowRight, Zap, Shield, CreditCard, Lock, X } from "lucide-react";
-import { useAuth } from "../hooks/useAuth";
+import { useAuth } from "../hooks/authContext.js";
 import { getCreditPacks, getSubscriptionPlans } from "../api";
 import PaymentModal from "../components/PaymentModal";
 
@@ -117,28 +117,31 @@ export function PricingPage({ auth: propAuth, onClose } = {}) {
   const [tab, setTab] = useState("subscription"); // 'subscription' | 'credits'
   const [packs, setPacks] = useState([]);
   const [plans, setPlans] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [, setLoading] = useState(true);
   const [paymentModal, setPaymentModal] = useState(null);
   const [openFaq, setOpenFaq] = useState(null);
+  const [refresh, setRefresh] = useState(0);
 
   useEffect(() => {
-    fetchPricing();
-  }, [auth]);
-
-  const fetchPricing = async () => {
+    let cancelled = false;
+    const fetchPricing = async () => {
     try {
       const [packsData, plansData] = await Promise.all([
         getCreditPacks(auth).catch(() => []),
         getSubscriptionPlans(auth).catch(() => []),
       ]);
+      if (cancelled) return;
       setPacks(Array.isArray(packsData) ? packsData : []);
       setPlans(Array.isArray(plansData) ? plansData : []);
     } catch (err) {
       console.error("Failed to load pricing:", err);
     } finally {
-      setLoading(false);
+      if (!cancelled) setLoading(false);
     }
-  };
+    };
+    fetchPricing();
+    return () => { cancelled = true; };
+  }, [auth, refresh]);
 
   // Merge backend data with rich metadata
   const activePlans = [
@@ -522,7 +525,7 @@ export function PricingPage({ auth: propAuth, onClose } = {}) {
           userEmail={auth?.email}
           onSuccess={() => {
             setPaymentModal(null);
-            fetchPricing();
+            setRefresh(value => value + 1);
           }}
           onClose={() => setPaymentModal(null)}
         />

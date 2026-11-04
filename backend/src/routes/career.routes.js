@@ -1,243 +1,49 @@
-// src/routes/career.routes.js — Resume-to-README and ATS Matching endpoints.
 import { Router } from "express";
 import multer from "multer";
 import { z } from "zod";
 import { requireAuth } from "../middleware/auth.js";
+import { aiLimiter } from "../middleware/rateLimiter.js";
 import { ApiError } from "../middleware/errorHandler.js";
-import { deductCredit } from "../services/paymentService.js";
-import {
-  extractTextFromPdfBuffer,
-  extractTextFromSession,
-  synthesizeResumeToProfile,
-  analyzeAtsMatch,
-  generateGithubProfileAi,
-  enhanceBioAi,
-  generateDiagramAi,
-  generateCoverLetterAi,
-} from "../services/careerService.js";
+import { env } from "../config/env.js";
+import { runBillable } from "../services/operationService.js";
+import { extractTextFromPdfBuffer, extractTextFromSession, analyzeAtsMatch, generateDiagramAi } from "../services/careerService.js";
 
-const upload = multer({
-  storage: multer.memoryStorage(),
-  limits: { fileSize: 10 * 1024 * 1024 }, // 10MB
-  fileFilter: (req, file, cb) => {
-    if (file.mimetype === "application/pdf") cb(null, true);
-    else cb(new ApiError(400, "INVALID_FILE_TYPE", "Only PDF resumes are supported"));
-  },
-});
-
+const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: env.MAX_FILE_SIZE_MB * 1024 * 1024, files: 1, fields: 12, fieldSize: 50000 }, fileFilter: (req, file, cb) => cb(file.mimetype === "application/pdf" ? null : new ApiError(400, "INVALID_FILE_TYPE", "Only PDFs are supported"), file.mimetype === "application/pdf") });
 export const careerRouter = Router();
+careerRouter.use(requireAuth, aiLimiter);
+const text = z.string().trim().max(30000);
+const schema = z.object({ sessionId: z.string().uuid().optional(), resumeText: text.optional(), jobDescription: text.optional(), role: text.optional(), tone: text.optional(), currentBio: text.optional(), name: text.optional(), targetFocus: text.optional(), customPrompt: text.optional(), text: text.optional(), mode: text.optional(), prompt: text.optional(), diagramType: text.optional(), theme: text.optional(), companyName: text.optional(), candidateName: text.optional() });
+async function resume(req, data) {
+  let value;
+  if (req.file) {
+    if (req.file.buffer.subarray(0, 5).toString() !== "%PDF-") throw new ApiError(400, "INVALID_PDF", "Invalid PDF file");
+    value = await extractTextFromPdfBuffer(req.file.buffer);
+  } else if (data.sessionId) value = await extractTextFromSession(data.sessionId, req.userId);
+  else value = data.resumeText;
+  if (!value || value.trim().length < 50) throw new ApiError(400, "RESUME_TOO_SHORT", "Provide at least 50 characters of readable resume text");
+  return value.slice(0, 30000);
+}
+function endpoint(path, description, prepare) {
+  careerRouter.post(path, upload.single("resume"), async (req, res, next) => {
+    try {
+      const parsed = schema.safeParse(req.body);
+      if (!parsed.success) throw new ApiError(400, "INVALID_INPUT", "Invalid input or text exceeds 30,000 characters");
+      const action = await prepare(req, parsed.data);
+      const { result, deduction } = await runBillable(req.userId, description, action);
+      res.json({ success: true, ...result, creditsRemaining: deduction.creditsRemaining, subscription: deduction.subscription });
+    } catch (err) { next(err); }
+  });
+}
 
-/**
- * POST /api/career/resume-to-readme
- * Synthesizes a resume into structured GitHub profile data.
- * Consumes 1 credit (or free for Pro members).
- */
-careerRouter.post("/resume-to-readme", requireAuth, upload.single("resume"), async (req, res, next) => {
-  try {
-    let resumeText = "";
-
-    if (req.file) {
-      resumeText = await extractTextFromPdfBuffer(req.file.buffer);
-    } else if (req.body.sessionId) {
-      resumeText = await extractTextFromSession(req.body.sessionId);
-    } else if (req.body.resumeText) {
-      resumeText = String(req.body.resumeText).trim();
-    } else {
-      throw new ApiError(400, "MISSING_INPUT", "Please upload a resume PDF, select an existing document, or paste resume text");
-    }
-
-    // Deduct 1 credit (or check Pro subscription)
-    const deduction = await deductCredit(
-      req.userId,
-      "resume_to_readme",
-      "Resume to GitHub README Synthesis"
-    );
-
-    const profileData = await synthesizeResumeToProfile(resumeText);
-
-    res.json({
-      success: true,
-      profileData,
-      creditsRemaining: deduction.creditsRemaining,
-      subscription: deduction.subscription,
-    });
-  } catch (err) {
-    next(err);
-  }
-});
-
-/**
- * POST /api/career/ats-scan
- * Matches resume against a job description with ATS score and STAR recommendations.
- * Consumes 1 credit (or free for Pro members).
- */
-careerRouter.post("/ats-scan", requireAuth, upload.single("resume"), async (req, res, next) => {
-  try {
-    let resumeText = "";
-    const jobDescription = String(req.body.jobDescription || "").trim();
-
-    if (!jobDescription) {
-      throw new ApiError(400, "MISSING_JD", "Job description is required for ATS comparison");
-    }
-
-    if (req.file) {
-      resumeText = await extractTextFromPdfBuffer(req.file.buffer);
-    } else if (req.body.sessionId) {
-      resumeText = await extractTextFromSession(req.body.sessionId);
-    } else if (req.body.resumeText) {
-      resumeText = String(req.body.resumeText).trim();
-    } else {
-      throw new ApiError(400, "MISSING_INPUT", "Please upload a resume PDF, select an existing document, or paste resume text");
-    }
-
-    const deduction = await deductCredit(
-      req.userId,
-      "ats_scan",
-      "ATS Resume Matcher Scan"
-    );
-
-    const analysis = await analyzeAtsMatch(resumeText, jobDescription);
-
-    res.json({
-      success: true,
-      analysis,
-      creditsRemaining: deduction.creditsRemaining,
-      subscription: deduction.subscription,
-    });
-  } catch (err) {
-    next(err);
-  }
-});
-
-/**
- * POST /api/career/generate-profile-ai
- * Generates a complete high-impact GitHub profile with AI based on target role & tone.
- */
-careerRouter.post("/generate-profile-ai", async (req, res, next) => {
-  try {
-    const { role, tone, currentBio, name, targetFocus, customPrompt } = req.body || {};
-    const result = await generateGithubProfileAi({
-      role: String(role || "Full-Stack AI Software Engineer").trim(),
-      tone: String(tone || "impactful").trim(),
-      currentBio: String(currentBio || "").trim(),
-      name: String(name || "").trim(),
-      targetFocus: String(targetFocus || "").trim(),
-      customPrompt: String(customPrompt || "").trim(),
-    });
-
-    res.json({
-      success: true,
-      profile: result,
-    });
-  } catch (err) {
-    next(err);
-  }
-});
-
-/**
- * POST /api/career/enhance-bio-ai
- * Polishes or enhances short bio or title with AI.
- */
-careerRouter.post("/enhance-bio-ai", async (req, res, next) => {
-  try {
-    const { text, role, mode } = req.body || {};
-    const result = await enhanceBioAi({
-      text: String(text || "").trim(),
-      role: String(role || "Full-Stack Software Engineer").trim(),
-      mode: String(mode || "bio").trim(),
-    });
-
-    res.json({
-      success: true,
-      ...result,
-    });
-  } catch (err) {
-    next(err);
-  }
-});
-
-/**
- * POST /api/career/generate-diagram
- * Generates Mermaid.js architecture diagrams and explanations.
- * Consumes 1 credit (or free for Pro members).
- */
-careerRouter.post("/generate-diagram", requireAuth, async (req, res, next) => {
-  try {
-    const { prompt, diagramType, theme } = req.body || {};
-    const deduction = await deductCredit(
-      req.userId,
-      "diagram_generation",
-      "Architecture Diagram Generation"
-    );
-
-    const result = await generateDiagramAi({
-      prompt: String(prompt || "").trim(),
-      diagramType: String(diagramType || "architecture").trim(),
-      theme: String(theme || "dark").trim(),
-    });
-
-    res.json({
-      success: true,
-      ...result,
-      creditsRemaining: deduction.creditsRemaining,
-      subscription: deduction.subscription,
-    });
-  } catch (err) {
-    next(err);
-  }
-});
-
-/**
- * POST /api/career/cover-letter
- * Generates an executive, tailored Cover Letter from Resume PDF/text + Job Description.
- * Consumes 1 credit (or free for Pro members).
- */
-careerRouter.post("/cover-letter", requireAuth, upload.single("resume"), async (req, res, next) => {
-  try {
-    let resumeText = "";
-    const jobDescription = String(req.body.jobDescription || "").trim();
-    const companyName = String(req.body.companyName || "Hiring Team").trim();
-    const candidateName = String(req.body.candidateName || "Candidate").trim();
-    const tone = String(req.body.tone || "confident").trim();
-
-    if (!jobDescription) {
-      throw new ApiError(400, "MISSING_JD", "Job description is required to generate a tailored cover letter");
-    }
-
-    if (req.file) {
-      resumeText = await extractTextFromPdfBuffer(req.file.buffer);
-    } else if (req.body.sessionId) {
-      resumeText = await extractTextFromSession(req.body.sessionId);
-    } else if (req.body.resumeText) {
-      resumeText = String(req.body.resumeText).trim();
-    } else {
-      throw new ApiError(400, "MISSING_INPUT", "Please upload a resume PDF, select an existing document, or paste resume text");
-    }
-
-    const deduction = await deductCredit(
-      req.userId,
-      "cover_letter",
-      `Cover Letter for ${companyName}`
-    );
-
-    const result = await generateCoverLetterAi({
-      resumeText,
-      jobDescription,
-      companyName,
-      candidateName,
-      tone,
-    });
-
-    res.json({
-      success: true,
-      ...result,
-      creditsRemaining: deduction.creditsRemaining,
-      subscription: deduction.subscription,
-    });
-  } catch (err) {
-    next(err);
-  }
+endpoint("/ats-scan", "ATS scan", async (req, data) => {
+  if (!data.jobDescription || data.jobDescription.length < 30) throw new ApiError(400, "MISSING_JD", "Job description is required");
+  const value = await resume(req, data);
+  return async () => ({ analysis: await analyzeAtsMatch(value, data.jobDescription) });
 });
 
 
 
+endpoint("/generate-diagram", "Diagram generation", async (req, data) => {
+  if (!data.prompt) throw new ApiError(400, "MISSING_PROMPT", "Describe the diagram to generate");
+  return () => generateDiagramAi(data);
+});

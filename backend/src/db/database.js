@@ -8,6 +8,8 @@
 //   user_documents      — { _id, userId, sessionId, fileName, pageCount, chunkCount, createdAt }
 //   payments            — { _id, userId, razorpayOrderId, razorpayPaymentId, razorpaySignature, amount, currency, type, creditsGranted, planId, status, createdAt, paidAt }
 //   credit_transactions — { _id, userId, amount, type, referenceId, description, balanceAfter, createdAt }
+import fs from "node:fs";
+import { fileURLToPath } from "node:url";
 import { MongoClient } from "mongodb";
 
 import { env } from "../config/env.js";
@@ -23,13 +25,17 @@ export async function connectDatabase() {
   // Zero-setup dev mode: spin up an in-process MongoDB with data persisted
   // to backend/data/mongodb (survives restarts). No Docker/Atlas needed.
   if (uri === "memory") {
-    const { MongoMemoryServer } = await import("mongodb-memory-server");
-    memoryServer = await MongoMemoryServer.create({
-      instance: {
+    if (env.NODE_ENV === "production") throw new Error("Use Atlas or a managed replica set in production");
+    const { MongoMemoryReplSet } = await import("mongodb-memory-server");
+    const dbPath = fileURLToPath(new URL("../../data/mongodb", import.meta.url));
+    fs.mkdirSync(dbPath, { recursive: true });
+    memoryServer = await MongoMemoryReplSet.create({
+      replSet: { count: 1, storageEngine: "wiredTiger" },
+      instanceOpts: [{
         dbName: env.MONGODB_DB,
         storageEngine: "wiredTiger",
-        dbPath: new URL("../../data/mongodb", import.meta.url).pathname,
-      },
+        dbPath,
+      }],
     });
     uri = memoryServer.getUri();
     logger.info({ dbPath: "data/mongodb" }, "Started embedded MongoDB (dev mode)");
@@ -41,6 +47,11 @@ export async function connectDatabase() {
   });
   await client.connect();
   db = client.db(env.MONGODB_DB);
+  const topology = await db.command({ hello: 1 });
+  if (!topology.setName && topology.msg !== "isdbgrid") {
+    await client.close();
+    throw new Error("MongoDB transactions require Atlas or a replica set. Use MONGODB_URI=memory for development.");
+  }
   logger.info({ uri: uri.replace(/\/\/.*@/, "//***@"), db: env.MONGODB_DB }, "Connected to MongoDB");
 }
 
@@ -62,8 +73,23 @@ export const collections = {
   userDocuments: () => getDb().collection("user_documents"),
   // Payments & credits
   payments: () => getDb().collection("payments"),
+  oauthStates: () => getDb().collection("oauth_states"),
+  webhookEvents: () => getDb().collection("webhook_events"),
+  operations: () => getDb().collection("operations"),
   creditTransactions: () => getDb().collection("credit_transactions"),
 };
+
+export async function withTransaction(work) {
+  if (!client) throw new Error("Database not connected");
+  const session = client.startSession();
+  try {
+    for (let attempt = 0; ; attempt++) {
+      try { return await session.withTransaction(() => work(session)); }
+      catch (err) { if (err.code !== 11000 || attempt >= 2) throw err; }
+    }
+  }
+  finally { await session.endSession(); }
+}
 
 export function pingDatabase() {
   return getDb().command({ ping: 1 });
@@ -73,7 +99,11 @@ export function pingDatabase() {
 export async function ensureIndexes() {
   await collections.users().createIndex({ email: 1 }, { unique: true });
   await collections.documents().createIndex({ sessionId: 1 });
+  await collections.documents().createIndex({ sessionId: 1, text: "text" }, { name: "session_lexical", default_language: "english" });
   await collections.userDocuments().createIndex({ sessionId: 1 });
+  await collections.userDocuments().createIndex({ userId: 1, createdAt: -1 });
+  await collections.oauthStates().createIndex({ expiresAt: 1 }, { expireAfterSeconds: 0 });
+  await collections.documents().createIndex({ expiresAt: 1 }, { expireAfterSeconds: 0 });
   // Payment indexes
   await collections.payments().createIndex({ userId: 1, createdAt: -1 });
   await collections.payments().createIndex({ razorpayOrderId: 1 }, { unique: true, sparse: true });

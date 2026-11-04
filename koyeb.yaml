@@ -28,9 +28,13 @@ services:
       - key: NODE_ENV
         value: production
       - key: NODE_VERSION
-        value: "20"
+        value: "22.19.0"
       - key: CORS_ORIGIN
-        value: "*"
+        value: ""
+      - key: PUBLIC_URL
+        value: ""
+      - key: TRUST_PROXY_HOPS
+        value: "1"
       - key: GEMINI_API_KEY
         value: ""
       - key: MONGODB_URI

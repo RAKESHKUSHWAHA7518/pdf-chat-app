@@ -6,10 +6,11 @@
   "type": "module",
   "scripts": {
     "install:all": "npm --prefix frontend install && npm --prefix backend install",
-    "build": "npm --prefix frontend install && npm --prefix frontend run build && npm --prefix backend install",
-    "start": "node backend/src/server.js",
-    "dev:backend": "npm --prefix backend run dev",
-    "dev:frontend": "npm --prefix frontend run dev"
+    "build": "node init && npm --prefix frontend ci && npm --prefix frontend run build && npm --prefix backend ci",
+    "start": "node init && node backend/src/server.js",
+    "dev:backend": "node init && npm --prefix backend run dev",
+    "dev:frontend": "node init && npm --prefix frontend run dev",
+    "test": "npm --prefix backend test"
   },
   "keywords": [
     "rag",
@@ -22,5 +23,8 @@
     "nodejs"
   ],
   "author": "Rakesh Kushwaha",
-  "license": "UNLICENSED"
+  "license": "UNLICENSED",
+  "engines": {
+    "node": ">=22.19.0"
+  }
 }

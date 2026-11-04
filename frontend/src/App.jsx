@@ -1,3 +1,4 @@
+import { extractCitations, formatAssistantCitations } from "./utils/citations.js";
 import { useState, useRef, useEffect, useCallback } from "react";
 import { Link, useSearchParams, useLocation } from "react-router-dom";
 import ReactMarkdown from "react-markdown";
@@ -31,17 +32,15 @@ import { savePdfBlob, getPdfBlob, deletePdfBlob } from "./utils/pdfStorage.js";
 import {
   API_URL,
   authHeaders,
-  clearAuth,
   deleteDocument,
   errorCode,
   errorMessage,
-  getStoredAuth,
   listDocuments,
   openDocument,
-  storeAuth,
   getAuthMe,
 } from "./api.js";
 import "./App.css";
+import { useAuth } from "./hooks/authContext.js";
 
 // ── Suggested questions shown after PDF loads ──
 const SUGGESTIONS = [
@@ -56,29 +55,6 @@ function formatTime(date) {
   return date.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
 }
 
-// ── Convert citation patterns into markdown links: [📄 Page X](#page-X) ──
-function formatAssistantCitations(content) {
-  if (!content || typeof content !== "string") return "";
-  let result = content.replace(/\[(?:Page|page|p\.)\s*(\d+)\]/gi, "[📄 Page $1](#page-$1)");
-  result = result.replace(/\((?:Page|page|p\.)\s*(\d+)\)/gi, "[📄 Page $1](#page-$1)");
-  return result;
-}
-
-// ── Extract list of unique cited page numbers from text ──
-function extractCitations(content) {
-  if (!content || typeof content !== "string") return [];
-  const regex = /(?:\[|\(|\b)(?:Page|page|p\.)\s*(\d+)/gi;
-  const pages = [];
-  let match;
-  while ((match = regex.exec(content)) !== null) {
-    const p = parseInt(match[1], 10);
-    if (!isNaN(p) && !pages.includes(p)) {
-      pages.push(p);
-    }
-  }
-  return pages.sort((a, b) => a - b);
-}
-
 export default function App() {
   const [session, setSession] = useState(null);       // { sessionId, fileName, pageCount, chunkCount }
   const [messages, setMessages] = useState([]);        // chat messages
@@ -90,14 +66,7 @@ export default function App() {
   const [searchParams] = useSearchParams();
   const location = useLocation();
   const isDashboard = location.pathname.startsWith("/dashboard");
-  const [auth, setAuth] = useState(() => {
-    const stored = getStoredAuth();
-    if (stored) return stored;
-    if (searchParams.get("testUser") === "1") {
-      return { token: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI0NGJkZTcxMC0zNDM1LTRlMGYtODMyOC01M2E2MjBjYTNmNTAiLCJpYXQiOjE3OTEzNjg5NTYsImV4cCI6MTc5Mzk2MDk1Nn0.tlUUbKelpjU_G9Q1IxlTe6E4jG9YwfbXoYwLJyz4X9w", email: "2107340130050@recbanda.ac.in" };
-    }
-    return null;
-  });
+  const { auth, login: loginUser, logout: logoutUser } = useAuth();
   const [guestQuota, setGuestQuota] = useState(null);  // { used, limit, remaining } for guests
   const [creditBalance, setCreditBalance] = useState(null);
   const [balanceRefreshTrigger, setBalanceRefreshTrigger] = useState(0);
@@ -106,12 +75,8 @@ export default function App() {
   const [documents, setDocuments] = useState([]);      // saved PDFs (signed-in users)
 
   useEffect(() => {
-    if (searchParams.get("testUser") === "1") {
-      setAuth((prev) => prev || { token: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI0NGJkZTcxMC0zNDM1LTRlMGYtODMyOC01M2E2MjBjYTNmNTAiLCJpYXQiOjE3OTEzNjg5NTYsImV4cCI6MTc5Mzk2MDk1Nn0.tlUUbKelpjU_G9Q1IxlTe6E4jG9YwfbXoYwLJyz4X9w", email: "2107340130050@recbanda.ac.in" });
-    }
-    if (searchParams.get("pricing") === "1") {
-      setShowPricing(true);
-    }
+
+
     if (!auth) {
       getAuthMe(null)
         .then((data) => {
@@ -199,13 +164,17 @@ export default function App() {
 
   // ── Auth logout ──
   const handleLogout = useCallback(() => {
-    clearAuth();
-    setAuth(null);
+    abortControllerRef.current?.abort();
+    pendingFileRef.current = null;
+    logoutUser();
+    setSession(null);
+    setMessages([]);
+    setPdfUrl(null);
     setCreditBalance(null);
     setGuestQuota(null);
     setDocuments([]);
     docsLoadedRef.current = null;
-  }, []);
+  }, [logoutUser]);
 
   // ── Document library: restore document ──
   const openDocumentById = useCallback(async (sessionId) => {
@@ -227,7 +196,7 @@ export default function App() {
       if (window.innerWidth >= 1024) setViewMode("split");
       setIsMobileSidebarOpen(false);
 
-      setMessages([
+      setMessages(data.history?.length ? data.history.map((message, index) => ({ ...message, id: index, time: new Date() })) : [
         {
           id: Date.now(),
           role: "assistant",
@@ -250,7 +219,7 @@ export default function App() {
     openDocumentByIdRef.current = openDocumentById;
   }, [openDocumentById]);
 
-  const loadDocuments = useCallback(async (currentAuth, { autoOpen } = { autoOpen: true }, retries = 2) => {
+  const loadDocuments = useCallback(async function loadDocuments(currentAuth, { autoOpen } = { autoOpen: true }, retries = 2) {
     try {
       const docs = await listDocuments(currentAuth);
       setDocuments(docs);
@@ -304,7 +273,7 @@ export default function App() {
   };
 
   // ── Handle PDF upload ──
-  const handleUpload = useCallback(async (file) => {
+  const handleUpload = useCallback(async (file, authenticated = auth) => {
     if (!file || file.type !== "application/pdf") {
       setError("Please upload a valid PDF file.");
       return;
@@ -318,8 +287,9 @@ export default function App() {
 
     try {
       const res = await fetch(`${API_URL}/upload`, {
+        credentials: "include",
         method: "POST",
-        headers: authHeaders(auth),
+        headers: authHeaders(authenticated),
         body: formData,
       });
 
@@ -352,8 +322,8 @@ export default function App() {
       if (window.innerWidth >= 1024) setViewMode("split");
       setIsMobileSidebarOpen(false);
 
-      if (auth) {
-        loadDocuments(auth, { autoOpen: false });
+      if (authenticated) {
+        loadDocuments(authenticated, { autoOpen: false });
         setBalanceRefreshTrigger((prev) => prev + 1);
       }
       setMessages([
@@ -409,6 +379,7 @@ export default function App() {
 
     try {
       const res = await fetch(`${API_URL}/chat`, {
+        credentials: "include",
         method: "POST",
         headers: { "Content-Type": "application/json", ...authHeaders(auth) },
         body: JSON.stringify({ sessionId: session.sessionId, question }),
@@ -446,6 +417,7 @@ export default function App() {
             const data = JSON.parse(line.slice(6));
             if (data.error) throw new Error(data.error);
             if (data.done) break;
+            if (data.sources) setMessages(prev => prev.map(m => m.id === assistantMsgId ? { ...m, sources: data.sources } : m));
             if (data.chunk) {
               setMessages((prev) =>
                 prev.map((m) =>
@@ -497,6 +469,7 @@ export default function App() {
     abortControllerRef.current?.abort();
     if (session) {
       await fetch(`${API_URL}/session/${session.sessionId}`, {
+        credentials: "include",
         method: "DELETE",
         headers: authHeaders(auth),
       }).catch(() => {});
@@ -514,14 +487,13 @@ export default function App() {
 
   // ── Auth handlers ──
   const handleAuthSuccess = (data) => {
-    storeAuth(data);
-    setAuth({ token: data.token, email: data.user.email });
+    loginUser(data);
     setShowAuthModal(false);
     setGuestQuota(null);
     if (pendingFileRef.current) {
       const file = pendingFileRef.current;
       pendingFileRef.current = null;
-      handleUpload(file);
+      handleUpload(file, { token: data.token, email: data.user.email });
     }
   };
 
@@ -599,10 +571,7 @@ export default function App() {
                     <FolderOpen style={{ width: "12px", height: "12px" }} />
                     <span>Library</span>
                   </Link>
-                  <Link to="/dashboard/github-studio" title="GitHub README Studio" className="sidebar-pill-btn" onClick={() => setIsMobileSidebarOpen(false)}>
-                    <Github style={{ width: "12px", height: "12px" }} />
-                    <span>Studio</span>
-                  </Link>
+
                   <Link to="/dashboard/settings" title="Settings" className="sidebar-icon-btn" onClick={() => setIsMobileSidebarOpen(false)}>
                     <SettingsIcon style={{ width: "13px", height: "13px" }} />
                   </Link>
@@ -1082,7 +1051,7 @@ export default function App() {
               ) : (
                 <>
                   {messages.map((msg) => {
-                    const citations = msg.role === "assistant" && !msg.streaming ? extractCitations(msg.content) : [];
+                    const citations = msg.role === "assistant" && !msg.streaming ? extractCitations(msg.content, msg.sources) : [];
                     return (
                       <div key={msg.id} className={`message ${msg.role}`}>
                         <div className="message-avatar">
@@ -1102,6 +1071,7 @@ export default function App() {
                                   a: ({ href, children }) => {
                                     if (href?.startsWith("#page-")) {
                                       const pageNum = parseInt(href.replace("#page-", ""), 10);
+                                      if (!msg.sources?.some(source => source.page === pageNum)) return <span>{children}</span>;
                                       return (
                                         <button
                                           type="button"
@@ -1121,7 +1091,7 @@ export default function App() {
                                   },
                                 }}
                               >
-                                {msg.role === "assistant" ? formatAssistantCitations(msg.content) : msg.content}
+                                {msg.role === "assistant" ? formatAssistantCitations(msg.content, msg.sources) : msg.content}
                               </ReactMarkdown>
 
                               {msg.streaming && (
@@ -1150,6 +1120,7 @@ export default function App() {
                             </div>
                           )}
 
+                          {msg.sources?.length > 0 && <details className="mt-2 text-xs text-slate-400"><summary>Retrieved sources</summary>{msg.sources.map((source, index) => <blockquote key={index} className="mt-2 border-l border-slate-600 pl-3">Page {source.page ?? "unknown"}: {source.excerpt}</blockquote>)}</details>}
                           <div className="message-time">{formatTime(msg.time)}</div>
                         </div>
                       </div>

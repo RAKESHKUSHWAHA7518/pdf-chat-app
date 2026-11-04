@@ -3,14 +3,15 @@ import crypto from "node:crypto";
 import Razorpay from "razorpay";
 
 import { env } from "../config/env.js";
-import { collections } from "../db/database.js";
+import { collections, withTransaction } from "../db/database.js";
 import { ApiError } from "../middleware/errorHandler.js";
 import { logger } from "../lib/logger.js";
 
-const razorpay = new Razorpay({
-  key_id: env.RAZORPAY_KEY_ID,
-  key_secret: env.RAZORPAY_KEY_SECRET,
-});
+let client;
+function paymentClient() {
+  if (!env.RAZORPAY_KEY_ID || !env.RAZORPAY_KEY_SECRET) throw new ApiError(503, "PAYMENTS_DISABLED", "Payments are not configured");
+  return client ??= new Razorpay({ key_id: env.RAZORPAY_KEY_ID, key_secret: env.RAZORPAY_KEY_SECRET });
+}
 
 export const CREDIT_PACKS = {
   pack_10: { credits: 10, amount: env.RAZORPAY_CREDITS_PACK_10_AMOUNT, label: "10 PDF Credits" },
@@ -20,14 +21,14 @@ export const CREDIT_PACKS = {
 
 export const SUBSCRIPTION_PLANS = {
   pro_monthly: {
-    planId: env.RAZORPAY_PLAN_PRO_MONTHLY || "plan_Tl77SFPCromUyx",
+    planId: env.RAZORPAY_PLAN_PRO_MONTHLY,
     amount: env.RAZORPAY_PRO_MONTHLY_AMOUNT,
     interval: "monthly",
     label: "Pro Monthly",
     price: "₹299/mo",
   },
   pro_yearly: {
-    planId: env.RAZORPAY_PLAN_PRO_YEARLY || "plan_Tl78c7YHFac2ya",
+    planId: env.RAZORPAY_PLAN_PRO_YEARLY,
     amount: env.RAZORPAY_PRO_YEARLY_AMOUNT,
     interval: "yearly",
     label: "Pro Yearly",
@@ -67,7 +68,7 @@ async function getOrCreateRazorpayCustomer(userId, email) {
     return user.subscription.razorpayCustomerId;
   }
 
-  const customer = await razorpay.customers.create({
+  const customer = await paymentClient().customers.create({
     email: email || "customer@pdfchat.ai",
     contact: "",
     notes: { userId },
@@ -81,10 +82,10 @@ async function getOrCreateRazorpayCustomer(userId, email) {
 }
 
 export async function createCreditsOrder(userId, packId, email) {
-  const pack = CREDIT_PACKS[packId];
+  const pack = Object.hasOwn(CREDIT_PACKS, packId) && CREDIT_PACKS[packId];
   if (!pack) throw new ApiError(400, "INVALID_PACK", "Invalid credit pack");
 
-  const order = await razorpay.orders.create({
+  const order = await paymentClient().orders.create({
     amount: pack.amount,
     currency: "INR",
     receipt: `credits_${userId}_${Date.now()}`.slice(0, 40),
@@ -108,206 +109,93 @@ export async function createCreditsOrder(userId, packId, email) {
 }
 
 export async function createSubscriptionOrder(userId, planId, email) {
-  const plan = SUBSCRIPTION_PLANS[planId];
+  const plan = Object.hasOwn(SUBSCRIPTION_PLANS, planId) && SUBSCRIPTION_PLANS[planId];
   if (!plan) throw new ApiError(400, "INVALID_PLAN", "Invalid subscription plan");
 
   const rzpPlanId = plan.planId || (planId === "pro_monthly" ? env.RAZORPAY_PLAN_PRO_MONTHLY : env.RAZORPAY_PLAN_PRO_YEARLY);
 
-  // Try creating recurring Razorpay subscription first
-  try {
-    const customerId = await getOrCreateRazorpayCustomer(userId, email);
-
-    const subscription = await razorpay.subscriptions.create({
-      plan_id: rzpPlanId,
-      customer_id: customerId,
-      total_count: plan.interval === "monthly" ? 12 : 1,
-      quantity: 1,
-      customer_notify: 1,
-      notes: { userId, planId },
-    });
-
-    await collections.payments().insertOne({
-      _id: crypto.randomUUID(),
-      userId,
-      razorpayOrderId: subscription.id,
-      razorpaySubscriptionId: subscription.id,
-      amount: plan.amount,
-      currency: "INR",
-      type: "subscription",
-      planId,
-      status: "created",
-      createdAt: new Date(),
-    });
-
-    return {
-      subscriptionId: subscription.id,
-      amount: plan.amount,
-      currency: "INR",
-      key: env.RAZORPAY_KEY_ID,
-      plan,
-    };
-  } catch (subErr) {
-    logger.warn({ err: subErr.message }, "Razorpay subscription creation failed, falling back to standard order");
-
-    // Seamless fallback to standard one-time order for Pro plan access
-    const order = await razorpay.orders.create({
-      amount: plan.amount,
-      currency: "INR",
-      receipt: `sub_${userId}_${Date.now()}`.slice(0, 40),
-      notes: { userId, planId, type: "subscription" },
-    });
-
-    await collections.payments().insertOne({
-      _id: crypto.randomUUID(),
-      userId,
-      razorpayOrderId: order.id,
-      amount: plan.amount,
-      currency: "INR",
-      type: "subscription",
-      planId,
-      status: "created",
-      createdAt: new Date(),
-    });
-
-    return {
-      orderId: order.id,
-      amount: order.amount,
-      currency: order.currency,
-      key: env.RAZORPAY_KEY_ID,
-      plan,
-    };
-  }
+  if (!rzpPlanId) throw new ApiError(503, "PLAN_NOT_CONFIGURED", "This subscription is not configured");
+  const customerId = await getOrCreateRazorpayCustomer(userId, email);
+  const subscription = await paymentClient().subscriptions.create({ plan_id: rzpPlanId, customer_id: customerId, total_count: plan.interval === "monthly" ? 12 : 1, quantity: 1, customer_notify: 1, notes: { userId, planId } });
+  await collections.payments().insertOne({ _id: crypto.randomUUID(), userId, razorpaySubscriptionId: subscription.id, amount: plan.amount, currency: "INR", type: "subscription", planId, status: "created", createdAt: new Date() });
+  return { subscriptionId: subscription.id, amount: plan.amount, currency: "INR", key: env.RAZORPAY_KEY_ID, plan };
 }
 
-export async function verifyPaymentAndGrant(userId, { razorpay_order_id, razorpay_subscription_id, razorpay_payment_id, razorpay_signature }) {
-  const isSubscription = Boolean(razorpay_subscription_id);
 
-  if (isSubscription) {
-    if (!verifyRazorpaySubscriptionSignature(razorpay_subscription_id, razorpay_payment_id, razorpay_signature)) {
-      throw new ApiError(400, "INVALID_SIGNATURE", "Subscription signature verification failed");
-    }
-  } else {
-    if (!verifyRazorpayOrderSignature(razorpay_order_id, razorpay_payment_id, razorpay_signature)) {
-      throw new ApiError(400, "INVALID_SIGNATURE", "Payment signature verification failed");
-    }
+// All monetary mutations run in a MongoDB transaction (Atlas or a replica set).
+// A unique ledger key serializes concurrent checkout and webhook deliveries.
+export async function settlePayment(paymentId, entity, subscriptionEntity = null, session) {
+  if (!entity || entity.status !== "captured") throw new ApiError(409, "PAYMENT_PENDING", "Payment is not captured yet");
+  const record = await collections.payments().findOne({ _id: paymentId }, { session });
+  if (!record) throw new ApiError(404, "ORDER_NOT_FOUND", "Payment record not found");
+  if (entity.amount !== record.amount || entity.currency !== record.currency) throw new ApiError(400, "PAYMENT_MISMATCH", "Payment amount or currency does not match");
+  if (record.type === "credits" && entity.order_id !== record.razorpayOrderId) throw new ApiError(400, "PAYMENT_MISMATCH", "Payment order does not match");
+  const key = "payment:" + entity.id;
+  if (await collections.creditTransactions().findOne({ _id: key }, { session })) return { alreadyProcessed: true, payment: record };
+  if (record.type === "credits" && ["paid", "refunded"].includes(record.status)) return { alreadyProcessed: true, payment: record };
+  let update;
+  if (record.type === "credits") update = { $inc: { credits: record.creditsGranted } };
+  else {
+    if (!subscriptionEntity?.current_end) throw new ApiError(409, "SUBSCRIPTION_PENDING", "Subscription period is not available yet");
+    update = { $set: { "subscription.planId": record.planId, "subscription.status": subscriptionEntity.status, "subscription.razorpaySubscriptionId": record.razorpaySubscriptionId }, $max: { "subscription.currentPeriodEnd": new Date(subscriptionEntity.current_end * 1000) } };
   }
-
-  const query = isSubscription
-    ? { razorpaySubscriptionId: razorpay_subscription_id }
-    : { razorpayOrderId: razorpay_order_id };
-
-  const payment = await collections.payments().findOne(query);
-  if (!payment) throw new ApiError(404, "ORDER_NOT_FOUND", "Order or subscription record not found");
-  if (payment.userId !== userId) throw new ApiError(403, "FORBIDDEN", "Payment record does not belong to user");
-  if (payment.status === "paid") return { alreadyProcessed: true, payment };
-
-  await collections.payments().updateOne(
-    { _id: payment._id },
-    {
-      $set: {
-        razorpayPaymentId: razorpay_payment_id,
-        razorpaySignature: razorpay_signature,
-        status: "paid",
-        paidAt: new Date(),
-      },
-    }
-  );
-
-  if (payment.type === "credits") {
-    await grantCredits(userId, payment.creditsGranted, payment._id, `Credit pack: ${payment.packId}`);
-  } else if (payment.type === "subscription") {
-    await activateSubscription(userId, payment.planId, payment.razorpaySubscriptionId || razorpay_subscription_id || payment.razorpayOrderId);
-  }
-
-  return { alreadyProcessed: false, payment };
+  const user = await collections.users().findOneAndUpdate({ _id: record.userId }, update, { session, returnDocument: "after" });
+  if (!user) throw new ApiError(404, "USER_NOT_FOUND", "Account not found");
+  await collections.creditTransactions().insertOne({ _id: key, userId: record.userId, amount: record.type === "credits" ? record.creditsGranted : 0, type: "purchase", referenceId: record._id, paymentId: entity.id, balanceAfter: user.credits, createdAt: new Date() }, { session });
+  await collections.payments().updateOne({ _id: record._id }, { $set: { status: "paid", razorpayPaymentId: entity.id, paidAt: new Date() } }, { session });
+  return { alreadyProcessed: false, payment: record };
 }
 
-async function grantCredits(userId, amount, referenceId, description) {
-  const user = await collections.users().findOneAndUpdate(
-    { _id: userId },
-    { $inc: { credits: amount } },
-    { returnDocument: "after" }
-  );
+export async function verifyPaymentAndGrant(userId, data) {
+  const { razorpay_order_id: orderId, razorpay_subscription_id: subId, razorpay_payment_id: paymentId, razorpay_signature: signature } = data;
+  if (![paymentId, signature, subId || orderId].every(v => typeof v === "string")) throw new ApiError(400, "INVALID_PAYMENT", "Invalid verification fields");
+  const valid = subId ? verifyRazorpaySubscriptionSignature(subId, paymentId, signature) : verifyRazorpayOrderSignature(orderId, paymentId, signature);
+  if (!valid) throw new ApiError(400, "INVALID_SIGNATURE", "Payment verification failed");
+  const record = await collections.payments().findOne(subId ? { razorpaySubscriptionId: subId } : { razorpayOrderId: orderId });
+  if (!record || record.userId !== userId) throw new ApiError(404, "ORDER_NOT_FOUND", "Payment record not found");
+  const entity = await paymentClient().payments.fetch(paymentId);
+  const subscription = subId ? await paymentClient().subscriptions.fetch(subId) : null;
+  return withTransaction(session => settlePayment(record._id, entity, subscription, session));
+}
 
-  const balanceAfter = user?.credits ?? amount;
-
-  await collections.creditTransactions().insertOne({
-    _id: crypto.randomUUID(),
-    userId,
-    amount,
-    type: "purchase",
-    referenceId,
-    description,
-    balanceAfter,
-    createdAt: new Date(),
+export async function deductCredit(userId, referenceId, description = "AI operation") {
+  return withTransaction(async session => {
+    const user = await collections.users().findOne({ _id: userId }, { session });
+    if (!user) throw new ApiError(401, "AUTH_REQUIRED", "Account not found");
+    const subscription = user.subscription?.status === "active" && new Date(user.subscription.currentPeriodEnd) > new Date();
+    const operationId = crypto.randomUUID();
+    const updated = subscription ? user : await collections.users().findOneAndUpdate({ _id: userId, credits: { $gte: 1 } }, { $inc: { credits: -1 } }, { session, returnDocument: "after" });
+    if (!updated) throw new ApiError(402, "INSUFFICIENT_CREDITS", "Please purchase credits to continue");
+    await collections.operations().insertOne({ _id: operationId, userId, charged: !subscription, status: "reserved", description, referenceId, createdAt: new Date() }, { session });
+    await collections.creditTransactions().insertOne({ _id: "usage:" + operationId, userId, amount: subscription ? 0 : -1, type: "usage", referenceId, description, balanceAfter: updated.credits, createdAt: new Date() }, { session });
+    return { success: true, subscription: Boolean(subscription), creditsRemaining: updated.credits, operationId };
   });
-
-  logger.info({ userId, amount, balance: balanceAfter }, "Credits granted");
-  return balanceAfter;
 }
 
-async function activateSubscription(userId, planId, razorpaySubscriptionId) {
-  const plan = SUBSCRIPTION_PLANS[planId];
-  const now = new Date();
-  const periodEnd = new Date(now);
-  periodEnd.setMonth(periodEnd.getMonth() + (plan.interval === "monthly" ? 1 : 12));
-
-  await collections.users().updateOne(
-    { _id: userId },
-    {
-      $set: {
-        "subscription.planId": planId,
-        "subscription.status": "active",
-        "subscription.currentPeriodEnd": periodEnd,
-        "subscription.razorpaySubscriptionId": razorpaySubscriptionId,
-      },
-    }
-  );
-
-  logger.info({ userId, planId, periodEnd }, "Subscription activated");
+export async function completeOperation(operationId) {
+  if (operationId) await collections.operations().updateOne({ _id: operationId, status: "reserved" }, { $set: { status: "completed", completedAt: new Date() } });
 }
 
-export async function deductCredit(userId, sessionId, description = "PDF upload / chat session") {
-  let user = await collections.users().findOne({ _id: userId });
-  if (!user) throw new ApiError(404, "USER_NOT_FOUND", "User not found");
-
-  const hasActiveSubscription =
-    user.subscription?.status === "active" &&
-    user.subscription?.currentPeriodEnd &&
-    new Date(user.subscription.currentPeriodEnd) > new Date();
-
-  if (hasActiveSubscription) return { success: true, subscription: true };
-
-  if (user.credits === undefined) {
-    await collections.users().updateOne({ _id: userId }, { $set: { credits: 3 } });
-    user.credits = 3;
-  }
-
-  const credits = user.credits ?? 0;
-  if (credits < 1) {
-    throw new ApiError(402, "INSUFFICIENT_CREDITS", "You have used all your 3 free credits. Please subscribe to Pro or purchase a credit pack to continue.");
-  }
-
-  const updated = await collections.users().findOneAndUpdate(
-    { _id: userId, credits: { $gte: 1 } },
-    { $inc: { credits: -1 } },
-    { returnDocument: "after" }
-  );
-
-  if (!updated) throw new ApiError(409, "CREDITS_CHANGED", "Credits changed, please retry");
-
-  await collections.creditTransactions().insertOne({
-    _id: crypto.randomUUID(),
-    userId,
-    amount: -1,
-    type: "usage",
-    referenceId: sessionId,
-    description,
-    balanceAfter: updated.credits,
-    createdAt: new Date(),
+export async function refundOperation(operationId) {
+  if (!operationId) return;
+  return withTransaction(async session => {
+    const operation = await collections.operations().findOneAndUpdate({ _id: operationId, status: "reserved" }, { $set: { status: "refunded" } }, { session, returnDocument: "before" });
+    if (!operation?.charged) return;
+    const user = await collections.users().findOneAndUpdate({ _id: operation.userId }, { $inc: { credits: 1 } }, { session, returnDocument: "after" });
+    await collections.creditTransactions().insertOne({ _id: "refund:" + operationId, userId: operation.userId, amount: 1, type: "usage_refund", referenceId: operationId, balanceAfter: user?.credits, createdAt: new Date() }, { session });
   });
+}
 
-  return { success: true, subscription: false, creditsRemaining: updated.credits };
+// Recover abandoned operations after crashes. The grace period exceeds the AI request timeout.
+export async function recoverAbandonedOperations() {
+  const stale = await collections.operations().find({ status: "reserved", createdAt: { $lt: new Date(Date.now() - Math.max(env.AI_TIMEOUT_MS * 3, 30 * 60000)) } }).limit(100).toArray();
+  for (const operation of stale) {
+    const document = await collections.userDocuments().findOne({ sessionId: operation.referenceId, userId: operation.userId });
+    if (document) {
+      await collections.documents().updateMany({ sessionId: operation.referenceId }, { $unset: { expiresAt: "" } });
+      await completeOperation(operation._id);
+    } else await refundOperation(operation._id);
+  }
 }
 
 export async function getUserCredits(userId) {
@@ -362,162 +250,57 @@ export async function getCreditTransactions(userId) {
   return transactions;
 }
 
+
 export function verifyWebhookSignature(payload, signature) {
-  if (!signature || !env.RAZORPAY_WEBHOOK_SECRET) return false;
-  const expectedSignature = crypto
-    .createHmac("sha256", env.RAZORPAY_WEBHOOK_SECRET)
-    .update(payload)
-    .digest("hex");
-  const expectedBuf = Buffer.from(expectedSignature);
-  const signatureBuf = Buffer.from(signature);
-  if (expectedBuf.length !== signatureBuf.length) return false;
-  return crypto.timingSafeEqual(expectedBuf, signatureBuf);
+  if (!Buffer.isBuffer(payload) || typeof signature !== "string" || !env.RAZORPAY_WEBHOOK_SECRET) return false;
+  const expected = crypto.createHmac("sha256", env.RAZORPAY_WEBHOOK_SECRET).update(payload).digest("hex");
+  return expected.length === signature.length && crypto.timingSafeEqual(Buffer.from(expected), Buffer.from(signature));
 }
 
-export async function handleWebhookEvent(event) {
-  const { event: eventType, payload } = event;
-  const paymentEntity = payload.payment?.entity;
-  const subscriptionEntity = payload.subscription?.entity;
-
-  logger.info({ eventType, paymentId: paymentEntity?.id, subscriptionId: subscriptionEntity?.id }, "Webhook received");
-
-  switch (eventType) {
-    case "payment.captured": {
-      if (!paymentEntity) break;
-      const orderId = paymentEntity.order_id;
-      const paymentId = paymentEntity.id;
-
-      const payment = await collections.payments().findOne({ razorpayOrderId: orderId });
-      if (!payment) {
-        logger.warn({ orderId }, "Payment record not found for captured payment");
-        break;
+export async function handleWebhookEvent(event, eventId) {
+  if (typeof eventId !== "string" || !eventId || !event?.payload) throw new ApiError(400, "INVALID_EVENT", "Missing event identity");
+  const entity = event.payload.payment?.entity;
+  const sub = event.payload.subscription?.entity;
+  // Fetch authoritative subscription state to avoid regressing on out-of-order events.
+  const currentSub = sub?.id ? await paymentClient().subscriptions.fetch(sub.id) : null;
+  return withTransaction(async session => {
+    if (await collections.webhookEvents().findOne({ _id: eventId }, { session })) return;
+    if (event.event === "payment.captured" || event.event === "subscription.charged") {
+      if (!entity) throw new ApiError(400, "INVALID_EVENT", "Missing payment");
+      const record = await collections.payments().findOne(sub ? { razorpaySubscriptionId: sub.id } : { razorpayOrderId: entity.order_id }, { session });
+      // Subscription captures may precede subscription.charged; that event handles the grant.
+      if (!record && await collections.creditTransactions().findOne({ _id: "payment:" + entity.id }, { session })) {
+        await collections.webhookEvents().insertOne({ _id: eventId, type: event.event, processedAt: new Date() }, { session });
+        return;
       }
-
-      if (payment.status === "paid") {
-        logger.info({ paymentId }, "Payment already processed");
-        break;
+      if (!record) throw new ApiError(409, "ORDER_PENDING", "Order has not been recorded yet");
+      await settlePayment(record._id, entity, currentSub, session);
+    } else if (event.event === "payment.failed" && entity) {
+      await collections.payments().updateOne({ razorpayOrderId: entity.order_id, status: "created" }, { $set: { status: "failed" } }, { session });
+    } else if (event.event.startsWith("subscription.") && currentSub) {
+      const record = await collections.payments().findOne({ razorpaySubscriptionId: currentSub.id }, { session });
+      if (!record) throw new ApiError(409, "ORDER_PENDING", "Subscription has not been recorded yet");
+      const fields = { "subscription.status": currentSub.status };
+      if (currentSub.current_end) fields["subscription.currentPeriodEnd"] = new Date(currentSub.current_end * 1000);
+      await collections.users().updateOne({ _id: record.userId, "subscription.razorpaySubscriptionId": currentSub.id }, { $set: fields }, { session });
+    } else if (event.event === "refund.processed") {
+      const refund = event.payload.refund?.entity;
+      if (!refund?.id || !refund.payment_id) throw new ApiError(400, "INVALID_EVENT", "Missing refund");
+      const key = "provider-refund:" + refund.id;
+      if (!(await collections.creditTransactions().findOne({ _id: key }, { session }))) {
+        const purchase = await collections.creditTransactions().findOne({ _id: "payment:" + refund.payment_id }, { session });
+        const record = purchase
+          ? await collections.payments().findOne({ _id: purchase.referenceId }, { session })
+          : await collections.payments().findOne({ razorpayPaymentId: refund.payment_id, status: { $in: ["paid", "refunded"] } }, { session });
+        if (!record) throw new ApiError(409, "PAYMENT_PENDING", "Original payment has not been processed");
+        const previous = record.refundedAmount || 0;
+        const total = Math.min(record.amount, previous + refund.amount);
+        const removal = record.type === "credits" ? Math.floor(total * record.creditsGranted / record.amount) - Math.floor(previous * record.creditsGranted / record.amount) : 0;
+        await collections.users().updateOne({ _id: record.userId }, record.type === "credits" ? { $inc: { credits: -removal } } : { $set: { "subscription.status": "refunded" } }, { session });
+        await collections.payments().updateOne({ _id: record._id }, { $set: { refundedAmount: total, status: total === record.amount ? "refunded" : "paid" } }, { session });
+        await collections.creditTransactions().insertOne({ _id: key, userId: record.userId, amount: -removal, type: "refund", referenceId: refund.payment_id, createdAt: new Date() }, { session });
       }
-
-      await collections.payments().updateOne(
-        { _id: payment._id },
-        {
-          $set: {
-            razorpayPaymentId: paymentId,
-            status: "paid",
-            paidAt: new Date(),
-          },
-        }
-      );
-
-      if (payment.type === "credits") {
-        await grantCredits(payment.userId, payment.creditsGranted, payment._id, `Credit pack: ${payment.packId}`);
-      } else if (payment.type === "subscription") {
-        await activateSubscription(payment.userId, payment.planId, payment.razorpaySubscriptionId);
-      }
-      break;
     }
-
-    case "payment.failed": {
-      if (!paymentEntity) break;
-      const orderId = paymentEntity.order_id;
-      await collections.payments().updateOne(
-        { razorpayOrderId: orderId },
-        { $set: { status: "failed", paidAt: new Date() } }
-      );
-      logger.info({ orderId }, "Payment marked as failed");
-      break;
-    }
-
-    case "subscription.charged": {
-      if (!subscriptionEntity) break;
-      const subId = subscriptionEntity.id;
-      const paymentId = subscriptionEntity.charge_id;
-
-      const payment = await collections.payments().findOne({ razorpaySubscriptionId: subId });
-      if (!payment) break;
-
-      await collections.payments().insertOne({
-        _id: crypto.randomUUID(),
-        userId: payment.userId,
-        razorpayOrderId: paymentId,
-        razorpayPaymentId: paymentId,
-        razorpaySubscriptionId: subId,
-        amount: subscriptionEntity.amount,
-        currency: "INR",
-        type: "subscription",
-        planId: payment.planId,
-        status: "paid",
-        paidAt: new Date(),
-        createdAt: new Date(),
-      });
-
-      const plan = SUBSCRIPTION_PLANS[payment.planId];
-      const periodEnd = new Date();
-      periodEnd.setMonth(periodEnd.getMonth() + (plan?.interval === "monthly" ? 1 : 12));
-
-      await collections.users().updateOne(
-        { _id: payment.userId },
-        { $set: { "subscription.currentPeriodEnd": periodEnd, "subscription.status": "active" } }
-      );
-      logger.info({ userId: payment.userId, subId }, "Subscription renewed");
-      break;
-    }
-
-    case "subscription.cancelled": {
-      if (!subscriptionEntity) break;
-      const subId = subscriptionEntity.id;
-      const payment = await collections.payments().findOne({ razorpaySubscriptionId: subId });
-      if (!payment) break;
-
-      await collections.users().updateOne(
-        { _id: payment.userId },
-        { $set: { "subscription.status": "cancelled" } }
-      );
-      logger.info({ userId: payment.userId, subId }, "Subscription cancelled");
-      break;
-    }
-
-    case "subscription.paused": {
-      if (!subscriptionEntity) break;
-      const subId = subscriptionEntity.id;
-      const payment = await collections.payments().findOne({ razorpaySubscriptionId: subId });
-      if (!payment) break;
-
-      await collections.users().updateOne(
-        { _id: payment.userId },
-        { $set: { "subscription.status": "paused" } }
-      );
-      break;
-    }
-
-    case "subscription.resumed": {
-      if (!subscriptionEntity) break;
-      const subId = subscriptionEntity.id;
-      const payment = await collections.payments().findOne({ razorpaySubscriptionId: subId });
-      if (!payment) break;
-
-      await collections.users().updateOne(
-        { _id: payment.userId },
-        { $set: { "subscription.status": "active" } }
-      );
-      break;
-    }
-
-    case "refund.processed": {
-      if (!paymentEntity) break;
-      const orderId = paymentEntity.order_id;
-      const payment = await collections.payments().findOne({ razorpayOrderId: orderId });
-      if (!payment) break;
-
-      await collections.payments().updateOne(
-        { _id: payment._id },
-        { $set: { status: "refunded" } }
-      );
-
-      if (payment.type === "credits") {
-        await grantCredits(payment.userId, -payment.creditsGranted, payment._id, `Refund for ${payment.packId}`);
-      }
-      break;
-    }
-  }
+    await collections.webhookEvents().insertOne({ _id: eventId, type: event.event, processedAt: new Date() }, { session });
+  });
 }

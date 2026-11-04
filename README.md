@@ -1,175 +1,96 @@
----
-title: AI PDF Chat App
-emoji: 📄
-colorFrom: indigo
-colorTo: blue
-sdk: docker
-app_port: 7860
-pinned: false
----
+# DevSuite AI
 
-# DevSuite AI — Multi-Tool AI Developer & Career Intelligence Platform
+A React and Node.js application for PDF question answering, resume matching, repository documentation, and Mermaid diagrams. Gemini supplies generation and embeddings; MongoDB stores documents, accounts, billing records, and chat history.
 
-A production-grade, full-stack AI platform unifying six specialized developer and career acceleration tools under a single custom JWT authentication engine, dark-mode design system, and Razorpay credit/subscription engine.
+This repository is a portfolio application under active hardening. Automated regression checks do not replace staging verification with real providers or establish an uptime or latency guarantee.
 
-**Developed by:** [Rakesh Kushwaha](https://github.com/RAKESHKUSHWAHA7518)  
-**Deployment Target:** Render.com / Railway / Koyeb / Docker (Single Unified Full-Stack Service)
+## Run locally
 
----
+Use Node.js 22.19 or later. Copy backend/.env.example to backend/.env and set GEMINI_API_KEY and a random JWT_SECRET of at least 32 characters.
 
-## ⚡ Architecture & Tech Stack
+Run:
 
-- **Frontend**: React 19, Vite, React Markdown, Remark GFM, Rehype Raw, Mermaid.js, Lucide Icons, Modern Pure CSS Glassmorphism
-- **Backend**: Node.js & Express (Layered: routes → middleware → services)
-- **AI & RAG Engine**: Google Gemini 2.5 Flash chat & Gemini embeddings, LangChain.js
-- **Database & Vector Search**: MongoDB Atlas M0 (`$vectorSearch` semantic retrieval across document chunks)
-- **GitHub Integration**: `@octokit/rest` with AES-256 encrypted Personal Access Tokens stored in MongoDB
-- **Diagram Engine**: Mermaid.js text-to-diagram generation and visual SVG canvas rendering
-- **Monetization & Credits**: Razorpay integration with Webhooks, 10/50 credit packs, and Pro Monthly/Yearly subscriptions
-- **Authentication**: Custom JWT authentication with scrypt password hashing
-- **Security & Reliability**: Helmet, express-rate-limit, Zod schema validation, Pino structured logging
-- **Unified Hosting**: In production, Express directly serves the optimized React SPA bundle from `frontend/dist`.
+    npm run install:all
+    npm run dev:backend
+    npm run dev:frontend
 
-```
-[Browser: React 19 Multi-Tool SPA]
-             │
-             │ HTTP / & /api/*
-             ▼
-[Express Backend Gateway]
-  ├── Serves React Static Bundle (frontend/dist)
-  ├── 1. PDF Chat Workspace (LangChain + Gemini RAG)
-  ├── 2. GitHub Profile README Studio (Octokit 1-Click Commit)
-  ├── 3. Resume-to-README Transformer (PDF to Markdown Profile)
-  ├── 4. AI ATS Resume Matcher & Google STAR Optimizer
-  ├── 5. GitHub Repo to README Studio (Manifest inspection & Docs gen)
-  ├── 6. Architecture Diagram Studio (Mermaid.js Text to Diagram)
-  └── Shared Credits (Razorpay) & Encrypted JWT / GitHub Secrets
-             │
-             ├── MongoDB Atlas M0 ($vectorSearch, Users, Documents, Payments)
-             └── Google Gemini 2.5 Flash API
-```
+Open http://localhost:5173. The development proxy routes /api to port 3001. Configuration loads from backend/.env regardless of the current directory.
 
----
+MongoDB must support transactions: use Atlas, an existing replica set, or MONGODB_URI=memory for a development replica set. Memory mode downloads a MongoDB binary on first use and persists local data under backend/data/mongodb. Do not use that mode for production.
 
-## 🚀 The 6 Specialized Developer Workspaces
+## Checks
 
-1. 📄 **PDF Chat Workspace (`/dashboard/chat-pdf`)**: Multi-page PDF conversational intelligence with sub-second streaming answers and verifiable source page citations.
-2. 🐙 **GitHub Profile Studio (`/dashboard/github-studio`)**: Interactive profile builder with typing lines, categorized tech badges, stats widgets, and 1-click publishing directly to `username/username` on GitHub.
-3. 📑 **Resume-to-README Generator (`/dashboard/resume-to-readme`)**: Converts any PDF resume or stored document into an impactful GitHub README in under 5 seconds.
-4. 🎯 **AI ATS Resume Matcher (`/dashboard/ats-matcher`)**: Evaluates resumes against technical job descriptions, calculates ATS keyword match scores, identifies missing skills, and rewrites bullets using the Google STAR method.
-5. 📦 **Repo README Generator (`/dashboard/repo-docs`)**: Inspects repository file trees, parses `package.json`/dependencies, and generates comprehensive production-grade documentation.
-6. 📐 **Architecture Diagram Studio (`/dashboard/diagrams`)**: Generates system architecture flowcharts, sequence diagrams, and microservice topologies from plain English descriptions using Mermaid.js.
+    npm --prefix backend test
+    npm --prefix frontend test
+    npm --prefix frontend run lint
+    npm --prefix frontend run build
+    npm --prefix backend audit
+    npm --prefix frontend audit
 
+The default test suite uses a disposable replica set, a local HTTP server, and fake credentials. It never calls paid AI or payment services. MongoDB binaries may be downloaded on first run; set MONGOMS_SYSTEM_BINARY and MONGOMS_VERSION to use an installed binary. The separate test:live script calls real configured providers and must only run against a dedicated staging database.
 
----
+GitHub Actions runs regression tests, lint, the production build, and dependency checks.
 
-## 📁 Project Structure
+## Deployment
 
-```
-pdf-chat-app/
-├── package.json              # Root orchestration (unified build & start scripts)
-├── render.yaml               # 1-Click Render.com deployment Blueprint
-├── docker-compose.yml        # Optional local Docker compose setup
-├── backend/
-│   ├── src/
-│   │   ├── config/env.js     # Validated environment configuration (Zod)
-│   │   ├── db/database.js    # MongoDB connection & Atlas vector search index setup
-│   │   ├── lib/              # Logger & vector store wrapper
-│   │   ├── middleware/       # Auth, rate-limiter, validation, error handler
-│   │   ├── routes/           # /api/health, /api/auth, /api/documents, /api/session
-│   │   ├── services/         # authService, ragService, guestService, sessionService
-│   │   ├── app.js            # Express app assembly & static React frontend serving
-│   │   └── server.js         # Bootstrap & graceful shutdown
-│   ├── .env.example
-│   └── package.json
-└── frontend/
-    ├── src/
-    │   ├── api.js            # Unified API client & error handling
-    │   ├── App.jsx           # Main chat & document interface
-    │   ├── components/       # AuthModal and UI components
-    │   └── App.css           # Modern theme styling
-    └── package.json
-```
+The root Dockerfile builds the frontend and serves it through Express. npm run build and npm start support the same unified deployment. Keep the browser and API on the same origin so signed guest cookies work consistently.
 
----
+Required settings:
 
-## 🛠️ Local Development Quick Start
+- NODE_ENV=production
+- PUBLIC_URL: exact public HTTPS origin, without a trailing slash
+- CORS_ORIGIN: comma-separated explicit allowed browser origins; wildcard origins are not accepted
+- JWT_SECRET: random secret, at least 32 characters
+- GEMINI_API_KEY and the desired chat/embedding model identifiers
+- MONGODB_URI: Atlas or another replica set; configure backups separately
+- TRUST_PROXY_HOPS: number of trusted reverse-proxy hops (usually 1 on a managed host); leave 0 for direct connections
 
-### 1. Prerequisites
-- **Node.js**: v20+ or v22+
-- **Google Gemini API Key**: [Get one free at Google AI Studio](https://aistudio.google.com/apikey)
-- **MongoDB Atlas**: Free M0 cluster connection string (or local MongoDB)
+Optional integrations:
 
-### 2. Setup Environment Variables
-In `backend/.env`:
-```env
-PORT=3001
-NODE_ENV=development
-GEMINI_API_KEY=your_gemini_api_key_here
-MONGODB_URI=mongodb+srv://<username>:<password>@<cluster>.mongodb.net/pdf_chat?retryWrites=true&w=majority
-JWT_SECRET=your_random_32_character_secret_key_here
-CORS_ORIGIN=http://localhost:5173
-```
+- GitHub: GITHUB_CLIENT_ID, GITHUB_CLIENT_SECRET, and GITHUB_TOKEN_KEY (64 random hexadecimal characters). Register PUBLIC_URL/api/github/oauth/callback as the callback URL.
+- Razorpay: RAZORPAY_KEY_ID, RAZORPAY_KEY_SECRET, RAZORPAY_WEBHOOK_SECRET, and your own RAZORPAY_PLAN_PRO_MONTHLY / RAZORPAY_PLAN_PRO_YEARLY. Configure /api/payments/webhook. Unconfigured payment creation fails explicitly instead of crashing app startup.
 
-### 3. Install & Run
-From the root directory:
-```bash
-# Terminal 1: Backend API (port 3001)
-npm run dev:backend
+Generate a separate GitHub encryption key with:
 
-# Terminal 2: Frontend with Vite HMR (port 5173, auto-proxies /api to 3001)
-npm run dev:frontend
-```
-Open `http://localhost:5173` in your browser.
+    node -e "console.log(require('node:crypto').randomBytes(32).toString('hex'))"
 
----
+Never reuse the JWT signing secret as the GitHub encryption key.
 
-## 🌐 Deploy to Render.com (Single Unified Service)
+## Security-update rollout
 
-Because this app relies on Server-Sent Events (SSE) streaming and persistent connections that struggle with Vercel's serverless timeouts, it is configured as a **Unified Full-Stack App**. Express serves both the backend API and the compiled React frontend from a single web service.
+1. Back up the database and deploy to staging first.
+2. Configure PUBLIC_URL and explicit allowed origins. Add the separate GitHub encryption key and provider plan IDs if those integrations are enabled.
+3. Deploy the updated server and frontend together. Existing login tokens are intentionally rejected by the new issuer/audience boundary, including the formerly embedded test token. Users must sign in again.
+4. Previously encrypted GitHub tokens must be reconnected; the new format uses authenticated AES-256-GCM encryption with a separate key. Do not rotate JWT_SECRET expecting it to rotate GitHub credentials.
+5. Register the webhook with the original raw-body signature flow. Verify captured, duplicate, failed, renewal, cancellation, and partial/full refund events in Razorpay test mode.
+6. Confirm Atlas vector indexing is ready, try a real PDF and follow-up question, check cited pages, and check restoration after a server restart.
+7. Check logs, backup restoration, resource limits, and the host's streaming/proxy settings before accepting real customers.
 
-### Step 1: Push Code to GitHub
-```bash
-cd C:\Users\rk751\Projects\pdf-chat-app
-git init -b main
-git add .
-git commit -m "feat: standalone AI PDF chat application ready for Render deployment"
-git remote add origin https://github.com/RAKESHKUSHWAHA7518/pdf-chat-app.git
-git push -u origin main
-```
+No external deployment or account setting is changed by these code edits.
 
-### Step 2: Create Web Service on Render
-1. Go to [dashboard.render.com](https://dashboard.render.com) and click **New +** → **Web Service**.
-2. Connect your `pdf-chat-app` repository.
-3. Configure the settings:
-   - **Name**: `pdf-chat-app`
-   - **Region**: Oregon (or nearest region)
-   - **Environment**: `Node`
-   - **Build Command**: `npm run build`
-   - **Start Command**: `npm start`
-   - **Plan**: `Free`
-4. Add **Environment Variables** in Render:
-   - `NODE_ENV`: `production`
-   - `GEMINI_API_KEY`: *(your Google Gemini API key)*
-   - `MONGODB_URI`: *(your MongoDB Atlas connection string)*
-   - `JWT_SECRET`: *(any secure 32+ character random string)*
-   - `CORS_ORIGIN`: `*`
-5. Click **Deploy Web Service**!
+## Engineering behavior
 
-Render will build the frontend with Vite, install backend dependencies, and launch Express. Your app will be live at:
-`https://pdf-chat-app.onrender.com`
+- Every document read, chat, extraction, and deletion checks its owner. Guest documents require a signed HttpOnly cookie.
+- Guest upload quotas are reserved atomically. An additional daily IP budget limits cookie-reset abuse; shared networks can therefore reach the guest limit and require sign-in.
+- AI tools authenticate and validate input, reserve credits, finalize successful operations, and refund failures. A periodic recovery task refunds abandoned reservations after a grace period.
+- Payment state and balances change in MongoDB transactions. Provider payment IDs and refund IDs deduplicate delivery. Webhook processing errors return a retryable response.
+- GitHub OAuth state is random, browser-bound, expires after ten minutes, and can be consumed only once.
+- Markdown is sanitized and Mermaid uses strict rendering with SVG sanitization. CSP restricts scripts; Tailwind is compiled at build time.
+- Signed-in chat history persists in MongoDB. A document lease prevents concurrent answers overwriting history. Requests have generation deadlines.
+- Retrieval includes recent user questions for follow-ups and returns source page/excerpt metadata. Document text is treated as untrusted evidence. These safeguards do not guarantee model accuracy.
+- PDFs have byte, page, and chunk limits. Scanned PDFs without readable text require OCR before upload.
+- In production, vector-search failures are surfaced rather than silently scanning all vectors in memory.
 
----
+## Remaining operational verification
 
-## 🗄️ MongoDB Atlas Setup Guide
-1. Create a free **M0** cluster at [cloud.mongodb.com](https://cloud.mongodb.com).
-2. Under **Network Access**, add `0.0.0.0/0` (allow access from Render).
-3. Under **Database Access**, create a user with read and write permissions.
-4. Copy your connection string (`mongodb+srv://...`).
-5. The backend automatically initializes the **Atlas Vector Search index** (`vector_index`) on the `documents` collection at startup!
+The repository cannot establish provider availability, real checkout success, model answer quality, mobile usability, or capacity without staging exercises. Measure latency, citation accuracy, cost per request, and concurrency before making performance claims. The app has process-local rate limiting; scale-out requires a shared limiter and an agreed usage budget. Large optional Mermaid layout chunks load only when needed.
 
----
+## Advanced retrieval
 
-## 📄 Copyright & Ownership
-Proprietary & Confidential — © 2026 [Rakesh Kushwaha](https://github.com/RAKESHKUSHWAHA7518). All rights reserved.
+The document chat pipeline now combines vector and lexical retrieval using reciprocal rank fusion, standalone follow-up query rewriting, validated model reranking and bounded evidence context. See [implementation and validation limits](ADVANCED_RAG.md). Live-model quality improvements have not yet been benchmarked.
 
+Retired tools: profile/bio generation, resume-to-README and cover-letter generation. Their old dashboard URLs redirect to document chat. Account, document and billing data are retained.
+
+### RAG reliability and evaluation
+
+Hybrid retrieval can continue with one search branch and reports degraded status. Both branches failing returns an error. Failed reranking requests a retry instead of generating an answer from unverified passages. Chat cancellation propagates to embedding requests and database queries with execution limits. /api/ready checks search-index readiness separately from /api/health. See backend/evaluation/README.md for the synthetic starter dataset and offline metrics runner. No live-model accuracy result is claimed.

@@ -1,4 +1,5 @@
 // src/server.js — Process bootstrap + database init + graceful shutdown.
+import { recoverAbandonedOperations } from "./services/paymentService.js";
 import { createApp } from "./app.js";
 import { env } from "./config/env.js";
 import { logger } from "./lib/logger.js";
@@ -13,6 +14,8 @@ async function main() {
   // 1. Database must be up before we accept traffic (fail fast otherwise)
   await connectDatabase();
   await ensureIndexes();
+  await recoverAbandonedOperations();
+  setInterval(() => recoverAbandonedOperations().catch(err => logger.error({ err }, "Operation recovery failed")), 60000).unref();
 
   // 2. Vector search index (auto-detect embedding size, create if missing)
   try {
@@ -52,11 +55,13 @@ function shutdown(signal) {
 }
 
 process.on("unhandledRejection", (reason) => {
-  logger.warn({ reason }, "Unhandled promise rejection captured (server protected)");
+  logger.fatal({ reason }, "Unhandled rejection; restarting");
+  shutdown("unhandledRejection");
 });
 
 process.on("uncaughtException", (err) => {
-  logger.error({ err }, "Uncaught exception captured (server protected)");
+  logger.fatal({ err }, "Uncaught exception; restarting");
+  shutdown("uncaughtException");
 });
 
 process.on("SIGTERM", () => shutdown("SIGTERM"));

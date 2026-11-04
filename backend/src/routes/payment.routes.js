@@ -123,21 +123,19 @@ paymentRouter.get("/transactions", requireAuth, async (req, res, next) => {
 paymentRouter.post("/webhook", async (req, res, next) => {
   try {
     const signature = req.headers["x-razorpay-signature"];
-    const payload = JSON.stringify(req.body);
+    const payload = req.rawBody;
 
-    if (!signature || !verifyWebhookSignature(payload, signature)) {
+    if (!payload || !signature || !verifyWebhookSignature(payload, signature)) {
       logger.warn("Invalid webhook signature");
       return res.status(400).json({ error: "Invalid signature" });
     }
 
     const event = req.body;
-    await handleWebhookEvent(event);
+    await handleWebhookEvent(event, req.headers["x-razorpay-event-id"]);
 
     res.json({ status: "ok" });
   } catch (err) {
     logger.error({ err }, "Webhook processing failed");
-    // Return 200 to prevent Razorpay retries for processing errors
-    // But log the error for investigation
-    res.status(200).json({ status: "error", message: "Webhook processing failed" });
+    res.status(503).json({ status: "error", message: "Webhook processing failed; retry required" });
   }
 });

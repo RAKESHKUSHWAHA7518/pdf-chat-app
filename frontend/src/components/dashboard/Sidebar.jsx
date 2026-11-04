@@ -34,9 +34,9 @@ export function Sidebar({
   const navItems = [
     { label: "Chat with PDF", path: "/dashboard/chat-pdf", icon: FileText, altPath: "/app" },
     { label: "Document Vault", path: "/dashboard/documents", icon: FolderOpen },
-    { label: "GitHub Profile Studio", path: "/dashboard/github-studio", icon: Github, badge: "Popular" },
-    { label: "Resume to README", path: "/dashboard/resume-to-readme", icon: FileCode, badge: "AI" },
-    { label: "Cover Letter AI", path: "/dashboard/cover-letter", icon: Mail, badge: "AI" },
+
+
+
     { label: "ATS Resume Matcher", path: "/dashboard/ats-matcher", icon: Target, badge: "STAR" },
     { label: "Repo README Studio", path: "/dashboard/repo-docs", icon: BookOpen, badge: "New" },
     { label: "Architecture Diagrams", path: "/dashboard/diagrams", icon: Network, badge: "Mermaid" },

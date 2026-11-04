@@ -17,7 +17,7 @@ import { paymentRouter } from "./routes/payment.routes.js";
 import { githubRouter } from "./routes/github.routes.js";
 import { careerRouter } from "./routes/career.routes.js";
 import { apiLimiter } from "./middleware/rateLimiter.js";
-import { optionalAuth } from "./middleware/auth.js";
+import { optionalAuth, guestIdentity } from "./middleware/auth.js";
 import { errorHandler, notFoundHandler } from "./middleware/errorHandler.js";
 
 const __filename = fileURLToPath(import.meta.url);
@@ -26,11 +26,24 @@ const frontendDist = path.resolve(__dirname, "../../frontend/dist");
 
 export function createApp() {
   const app = express();
+  app.set("trust proxy", env.TRUST_PROXY_HOPS);
 
   // Security headers — relax CSP to allow React client assets & fonts
   app.use(
     helmet({
-      contentSecurityPolicy: false,
+      contentSecurityPolicy: {
+        directives: {
+          defaultSrc: ["'self'"],
+          scriptSrc: ["'self'", "https://checkout.razorpay.com"],
+          styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
+          fontSrc: ["'self'", "https://fonts.gstatic.com"],
+          imgSrc: ["'self'", "data:", "blob:", "https:"],
+          connectSrc: ["'self'", "https://api.razorpay.com", new URL(env.PUBLIC_URL).origin],
+          frameSrc: ["'self'", "blob:", "https://api.razorpay.com", "https://checkout.razorpay.com"],
+          objectSrc: ["'none'"],
+          upgradeInsecureRequests: env.NODE_ENV === "production" ? [] : null,
+        },
+      },
       crossOriginEmbedderPolicy: false,
     })
   );
@@ -41,16 +54,16 @@ export function createApp() {
       origin: (origin, callback) => {
         if (!origin) return callback(null, true);
         const allowedOrigins = (env.CORS_ORIGIN || "*").split(",").map((o) => o.trim());
-        if (allowedOrigins.includes("*") || allowedOrigins.includes(origin)) {
+        if (allowedOrigins.includes(origin) || origin === new URL(env.PUBLIC_URL).origin) {
           return callback(null, true);
         }
-        return callback(null, true);
+        return callback(null, false);
       },
       credentials: true,
     })
   );
 
-  app.use(express.json({ limit: "1mb" }));
+  app.use(express.json({ limit: "1mb", verify: (req, res, buffer) => { if (req.path === "/api/payments/webhook") req.rawBody = buffer; } }));
 
   // Structured request logging
   app.use(
@@ -65,6 +78,7 @@ export function createApp() {
 
   // Attach req.userId when a valid JWT is present (all /api routes)
   app.use("/api", optionalAuth);
+  app.use("/api", guestIdentity);
 
 // API Routes
   app.use("/api", healthRouter);

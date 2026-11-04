@@ -1,5 +1,5 @@
 # ── Backend image ──
-# node:22-slim (glibc) so the better-sqlite3 prebuilt binary works without a toolchain
+# Node runtime aligned with CI
 FROM node:22-slim
 
 ENV NODE_ENV=production
@@ -13,8 +13,8 @@ RUN npm ci --omit=dev
 # App source
 COPY src ./src
 
-# SQLite data lives here (mount a volume to persist it)
-RUN mkdir -p /app/data && chown -R node:node /app
+# Writable temporary upload directory
+RUN mkdir -p /app/uploads && chown -R node:node /app
 USER node
 
 EXPOSE 3001

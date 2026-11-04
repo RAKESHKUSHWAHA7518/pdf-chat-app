@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { FileText, ArrowRight, Lock, Mail, Sparkles, CheckCircle2 } from "lucide-react";
-import { useAuth } from "../hooks/useAuth";
+import { useAuth } from "../hooks/authContext.js";
 import { login as apiLogin } from "../api";
 import { Button, Input, InteractiveCard } from "../components/ui";
 

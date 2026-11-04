@@ -1,0 +1,12 @@
+import { lazy } from "react";
+export const LandingPage = lazy(() => import("../pages/LandingPage").then(m => ({ default: m.LandingPage })));
+export const LoginPage = lazy(() => import("../pages/LoginPage").then(m => ({ default: m.LoginPage })));
+export const SignupPage = lazy(() => import("../pages/SignupPage").then(m => ({ default: m.SignupPage })));
+export const PricingPage = lazy(() => import("../pages/PricingPage").then(m => ({ default: m.PricingPage })));
+export const DocsPage = lazy(() => import("../pages/DocsPage").then(m => ({ default: m.DocsPage })));
+export const DocumentsPage = lazy(() => import("../pages/DocumentsPage").then(m => ({ default: m.DocumentsPage })));
+export const SettingsPage = lazy(() => import("../pages/SettingsPage").then(m => ({ default: m.SettingsPage })));
+export const AtsMatcher = lazy(() => import("../pages/AtsMatcher").then(m => ({ default: m.AtsMatcher })));
+export const RepoDocsPage = lazy(() => import("../pages/RepoDocsPage").then(m => ({ default: m.RepoDocsPage })));
+export const DiagramStudio = lazy(() => import("../pages/DiagramStudio").then(m => ({ default: m.DiagramStudio })));
+export const App = lazy(() => import("../App.jsx"));

@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { FileText, Sparkles, Menu, X, ArrowRight, ArrowLeft } from "lucide-react";
-import { useAuth } from "../../hooks/useAuth";
+import { useAuth } from "../../hooks/authContext.js";
 import { Button } from "../ui/Button";
 
 export function Navbar() {
@@ -13,8 +13,8 @@ export function Navbar() {
 
   const navLinks = [
     { label: "Features", href: "/#features", isHash: true },
-    { label: "GitHub Studio", href: "/dashboard/github-studio", isHash: false },
-    { label: "Resume to README", href: "/dashboard/resume-to-readme", isHash: false },
+
+
     { label: "Pricing", href: "/pricing", isHash: false },
     { label: "Docs", href: "/docs", isHash: false },
   ];
@@ -54,76 +54,6 @@ export function Navbar() {
           </div>
         </div>
       </header>
-    );
-  }
-
-  function Logo({ className = "w-8 h-8" }) {
-    return (
-      <div className={`relative flex items-center justify-center shrink-0 ${className}`}>
-        <svg
-          viewBox="0 0 36 36"
-          fill="none"
-          xmlns="http://www.w3.org/2000/svg"
-          className="w-full h-full drop-shadow-[0_2px_10px_rgba(168,85,247,0.45)]"
-        >
-          <defs>
-            <linearGradient id="pdfchat-logo-grad" x1="0%" y1="0%" x2="100%" y2="100%">
-              <stop offset="0%" stopColor="#6366F1" />
-              <stop offset="50%" stopColor="#A855F7" />
-              <stop offset="100%" stopColor="#EC4899" />
-            </linearGradient>
-            <linearGradient id="pdfchat-bg-grad" x1="0%" y1="0%" x2="100%" y2="100%">
-              <stop offset="0%" stopColor="#1E1B4B" stopOpacity="0.9" />
-              <stop offset="100%" stopColor="#0F172A" stopOpacity="0.95" />
-            </linearGradient>
-            <linearGradient id="pdfchat-sparkle-grad" x1="0%" y1="0%" x2="100%" y2="100%">
-              <stop offset="0%" stopColor="#F472B6" />
-              <stop offset="100%" stopColor="#C084FC" />
-            </linearGradient>
-          </defs>
-
-          {/* Container badge */}
-          <rect
-            x="1.5"
-            y="1.5"
-            width="33"
-            height="33"
-            rx="9"
-            fill="url(#pdfchat-bg-grad)"
-            stroke="url(#pdfchat-logo-grad)"
-            strokeWidth="1.5"
-          />
-
-          {/* PDF Document silhouette */}
-          <path
-            d="M10 8.5C10 7.67157 10.6716 7 11.5 7H19.5L25 12.5V26.5C25 27.3284 24.3284 28 23.5 28H11.5C10.6716 28 10 27.3284 10 26.5V8.5Z"
-            fill="url(#pdfchat-logo-grad)"
-            fillOpacity="0.18"
-            stroke="url(#pdfchat-logo-grad)"
-            strokeWidth="1.3"
-            strokeLinejoin="round"
-          />
-
-          {/* Folded corner tab */}
-          <path
-            d="M19.5 7V12.5H25"
-            stroke="url(#pdfchat-logo-grad)"
-            strokeWidth="1.3"
-            strokeLinejoin="round"
-          />
-
-          {/* Document lines */}
-          <line x1="13.5" y1="16" x2="18.5" y2="16" stroke="#94A3B8" strokeWidth="1.2" strokeLinecap="round" />
-          <line x1="13.5" y1="19.5" x2="17.5" y2="19.5" stroke="#94A3B8" strokeWidth="1.2" strokeLinecap="round" />
-
-          {/* AI Sparkle */}
-          <path
-            d="M22 17.5L22.8 19.8L25.1 20.6L22.8 21.4L22 23.7L21.2 21.4L18.9 20.6L21.2 19.8L22 17.5Z"
-            fill="url(#pdfchat-sparkle-grad)"
-          />
-          <circle cx="15.5" cy="23.5" r="1.1" fill="#6366F1" />
-        </svg>
-      </div>
     );
   }
 
@@ -307,3 +237,73 @@ export function Navbar() {
     </header>
   );
 }
+
+  function Logo({ className = "w-8 h-8" }) {
+    return (
+      <div className={`relative flex items-center justify-center shrink-0 ${className}`}>
+        <svg
+          viewBox="0 0 36 36"
+          fill="none"
+          xmlns="http://www.w3.org/2000/svg"
+          className="w-full h-full drop-shadow-[0_2px_10px_rgba(168,85,247,0.45)]"
+        >
+          <defs>
+            <linearGradient id="pdfchat-logo-grad" x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" stopColor="#6366F1" />
+              <stop offset="50%" stopColor="#A855F7" />
+              <stop offset="100%" stopColor="#EC4899" />
+            </linearGradient>
+            <linearGradient id="pdfchat-bg-grad" x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" stopColor="#1E1B4B" stopOpacity="0.9" />
+              <stop offset="100%" stopColor="#0F172A" stopOpacity="0.95" />
+            </linearGradient>
+            <linearGradient id="pdfchat-sparkle-grad" x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" stopColor="#F472B6" />
+              <stop offset="100%" stopColor="#C084FC" />
+            </linearGradient>
+          </defs>
+
+          {/* Container badge */}
+          <rect
+            x="1.5"
+            y="1.5"
+            width="33"
+            height="33"
+            rx="9"
+            fill="url(#pdfchat-bg-grad)"
+            stroke="url(#pdfchat-logo-grad)"
+            strokeWidth="1.5"
+          />
+
+          {/* PDF Document silhouette */}
+          <path
+            d="M10 8.5C10 7.67157 10.6716 7 11.5 7H19.5L25 12.5V26.5C25 27.3284 24.3284 28 23.5 28H11.5C10.6716 28 10 27.3284 10 26.5V8.5Z"
+            fill="url(#pdfchat-logo-grad)"
+            fillOpacity="0.18"
+            stroke="url(#pdfchat-logo-grad)"
+            strokeWidth="1.3"
+            strokeLinejoin="round"
+          />
+
+          {/* Folded corner tab */}
+          <path
+            d="M19.5 7V12.5H25"
+            stroke="url(#pdfchat-logo-grad)"
+            strokeWidth="1.3"
+            strokeLinejoin="round"
+          />
+
+          {/* Document lines */}
+          <line x1="13.5" y1="16" x2="18.5" y2="16" stroke="#94A3B8" strokeWidth="1.2" strokeLinecap="round" />
+          <line x1="13.5" y1="19.5" x2="17.5" y2="19.5" stroke="#94A3B8" strokeWidth="1.2" strokeLinecap="round" />
+
+          {/* AI Sparkle */}
+          <path
+            d="M22 17.5L22.8 19.8L25.1 20.6L22.8 21.4L22 23.7L21.2 21.4L18.9 20.6L21.2 19.8L22 17.5Z"
+            fill="url(#pdfchat-sparkle-grad)"
+          />
+          <circle cx="15.5" cy="23.5" r="1.1" fill="#6366F1" />
+        </svg>
+      </div>
+    );
+  }

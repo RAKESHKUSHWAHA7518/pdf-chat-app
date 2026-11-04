@@ -45,6 +45,7 @@ class SessionService {
   get(sessionId) {
     const session = this.sessions.get(sessionId);
     if (!session) return null;
+    if (Date.now() - session.lastAccessedAt > env.SESSION_TTL_MINUTES * 60000) { this.delete(sessionId); return null; }
     session.lastAccessedAt = Date.now(); // sliding expiry
     return session;
   }

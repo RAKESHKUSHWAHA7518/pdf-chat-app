@@ -1,8 +1,11 @@
+import { abortable, throwIfAborted, databaseOptions } from "./deadline.js";
 // src/lib/vectorStore.js — MongoDB Atlas Vector Search store.
 // One shared `documents` collection; each query is scoped to a sessionId
 // via the vector-search pre-filter (defined in the search index).
 // Falls back to in-process cosine similarity if $vectorSearch is unavailable
 // (e.g. embedded dev MongoDB, or Atlas still building the index).
+import crypto from "node:crypto";
+import { fuseRanks } from "./retrieval.js";
 import { Document } from "@langchain/core/documents";
 
 import { env } from "../config/env.js";
@@ -25,32 +28,37 @@ export class MongoVectorStore {
     const texts = docs.map((d) => d.pageContent);
     const vectors = await this.embeddingsModel.embedDocuments(texts);
 
+    if (vectors.length !== docs.length || vectors.some(vector => !vector.length || vector.some(value => !Number.isFinite(value)))) throw new Error("Embedding provider returned incomplete vectors");
     const records = vectors.map((vector, i) => ({
       sessionId: this.sessionId,
       text: docs[i].pageContent,
-      metadata: docs[i].metadata || {},
+      metadata: { ...docs[i].metadata, chunkId: crypto.randomUUID(), chunkIndex: i },
       embedding: vector,
       createdAt: new Date(),
+      expiresAt: new Date(Date.now() + 86400000),
     }));
 
     await collections.documents().insertMany(records);
     return records.length;
   }
 
-  async similaritySearch(query, k = 4) {
-    const queryVector = await this.embeddingsModel.embedQuery(query);
+  async similaritySearch(query, k = 4, options = {}) {
+    const queryVector = await abortable(() => this.embeddingsModel.embedQuery(query, options), options.signal);
+    if (!queryVector.length || queryVector.some(value => !Number.isFinite(value))) throw new Error("Embedding provider returned an invalid query vector");
     try {
-      return await this.atlasVectorSearch(queryVector, k);
+      return await this.atlasVectorSearch(queryVector, k, options);
     } catch (err) {
+      throwIfAborted(options.signal);
+      if (env.NODE_ENV === "production") throw err;
       logger.warn(
         { err: err.message, sessionId: this.sessionId },
         "$vectorSearch unavailable — falling back to in-process cosine similarity"
       );
-      return this.cosineFallback(queryVector, k);
+      return this.cosineFallback(queryVector, k, options);
     }
   }
 
-  async atlasVectorSearch(queryVector, k) {
+  async atlasVectorSearch(queryVector, k, options = {}) {
     const results = await collections
       .documents()
       .aggregate([
@@ -73,17 +81,17 @@ export class MongoVectorStore {
             score: { $meta: "vectorSearchScore" },
           },
         },
-      ])
+      ], databaseOptions(options))
       .toArray();
 
     return results.map((r) => new Document({ pageContent: r.text, metadata: r.metadata }));
   }
 
   // Local cosine search over this session's chunks (works on any MongoDB).
-  async cosineFallback(queryVector, k) {
+  async cosineFallback(queryVector, k, options = {}) {
     const docs = await collections
       .documents()
-      .find({ sessionId: this.sessionId })
+      .find({ sessionId: this.sessionId }, databaseOptions(options))
       .project({ text: 1, metadata: 1, embedding: 1 })
       .toArray();
 
@@ -95,6 +103,24 @@ export class MongoVectorStore {
     return scored
       .slice(0, k)
       .map((r) => new Document({ pageContent: r.doc.text, metadata: r.doc.metadata }));
+  }
+
+  async lexicalSearch(query, k = 20, options = {}) {
+    const records = await collections.documents().find({ sessionId: this.sessionId, $text: { $search: query.slice(0, 2000) } }, { ...databaseOptions(options), projection: { text: 1, metadata: 1, score: { $meta: "textScore" } } }).sort({ score: { $meta: "textScore" }, _id: 1 }).limit(k).toArray();
+    return records.map(record => new Document({ pageContent: record.text, metadata: record.metadata }));
+  }
+
+  async hybridSearch(query, k = 20, lexicalQuery = query, options = {}) {
+    const results = await Promise.allSettled([
+      abortable(() => this.similaritySearch(query, k, options), options.signal),
+      abortable(() => this.lexicalSearch(lexicalQuery, k, options), options.signal),
+    ]);
+    throwIfAborted(options.signal);
+    if (results.every(result => result.status === "rejected")) throw new AggregateError(results.map(result => result.reason), "Document retrieval unavailable");
+    const failures = results.flatMap((result, i) => result.status === "rejected" ? [i === 0 ? "vector" : "keyword"] : []);
+    if (failures.length) logger.warn({ failures }, "Retrieval running with one search branch");
+    const docs = fuseRanks(results.filter(result => result.status === "fulfilled").map(result => result.value), k);
+    return Object.assign(docs, { diagnostics: { degraded: failures.length > 0, failedBranches: failures } });
   }
 
   asRetriever(k = 4) {
