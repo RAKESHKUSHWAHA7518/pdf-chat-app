@@ -1,5 +1,6 @@
 import { LandingPage, LoginPage, SignupPage, PricingPage, DocsPage, DocumentsPage, SettingsPage, AtsMatcher, RepoDocsPage, DiagramStudio, App } from "./lazyPages.jsx";
 import { Suspense } from "react";
+import { GithubWorkspace } from "./lazyPages.jsx";
 import { createBrowserRouter, Navigate } from "react-router-dom";
 import { AuthProvider } from "../hooks/useAuth.jsx";
 import { PublicLayout, AuthLayout, AppLayout } from "../components/layout/PageLayout";
@@ -90,6 +91,7 @@ export const router = createBrowserRouter([
       { path: "cover-letter", element: <Navigate to="/dashboard/chat-pdf" replace /> },
       { path: "ats-matcher", element: <AtsMatcher /> },
       { path: "repo-docs", element: <RepoDocsPage /> },
+      { path: "github-workspace", element: <GithubWorkspace /> },
       { path: "diagrams", element: <DiagramStudio /> },
       { path: "chat-pdf", element: <App /> },
       { path: "documents", element: <DocumentsPage /> },

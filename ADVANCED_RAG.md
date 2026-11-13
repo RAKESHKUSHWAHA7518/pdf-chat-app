@@ -33,3 +33,7 @@ Recruit 8–10 users with real documents. Observe successful tasks and voluntary
 Chat cancellation is propagated to query rewriting, Gemini embeddings, MongoDB queries and passage reranking. MongoDB retrieval has bounded execution time. /api/ready checks vector-index queryability and the lexical index separately from /api/health. A failure in readiness does not establish a provider outage; inspect configuration. No live Atlas index has been verified in this change.
 
 Use backend/evaluation for the 30-case synthetic starter dataset and metrics runner. This is evaluation infrastructure, not a completed live-model benchmark. Claim-level entailment checking, real-document adversarial evaluation, OCR and multi-document workspaces remain pending.
+
+## Updated product direction
+
+The GitHub repository-understanding workflow and phased implementation are recorded in [GitHub Intelligence PRD](docs/GITHUB_INTELLIGENCE_PRD.md). The first read-only repository workspace is implemented; see [setup and current limitations](docs/GITHUB_WORKSPACE_SETUP.md). The diagram evidence graph, auto-sync and PR reviewer remain unimplemented.

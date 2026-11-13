@@ -8,11 +8,11 @@ import { logger } from "../lib/logger.js";
 
 const genAI = new GoogleGenerativeAI(env.GEMINI_API_KEY);
 
-// Derive 32-byte encryption key from JWT_SECRET for AES-256-CBC
+// Dedicated 32-byte key for authenticated AES-256-GCM token encryption.
 const ENCRYPTION_KEY = env.GITHUB_TOKEN_KEY ? Buffer.from(env.GITHUB_TOKEN_KEY, "hex") : null;
 
 
-function encryptToken(plainText) {
+export function encryptToken(plainText) {
   if (!ENCRYPTION_KEY) throw new ApiError(503, "GITHUB_NOT_CONFIGURED", "GitHub encryption key is not configured");
   const iv = crypto.randomBytes(12);
   const cipher = crypto.createCipheriv("aes-256-gcm", ENCRYPTION_KEY, iv);
@@ -21,13 +21,13 @@ function encryptToken(plainText) {
   return `v2:${iv.toString("hex")}:${cipher.getAuthTag().toString("hex")}:${encrypted}`;
 }
 
-function decryptToken(encryptedText) {
+export function decryptToken(encryptedText) {
   if (!encryptedText) return null;
   if (!ENCRYPTION_KEY || !encryptedText.startsWith("v2:")) throw new ApiError(409, "GITHUB_RECONNECT_REQUIRED", "Please reconnect GitHub after the security update");
   const [, ivHex, tagHex, cipherHex] = encryptedText.split(":");
   if (!ivHex || !cipherHex) return null;
   const iv = Buffer.from(ivHex, "hex");
-  const decipher = crypto.createDecipheriv("aes-256-cbc", ENCRYPTION_KEY, iv);
+  const decipher = crypto.createDecipheriv("aes-256-gcm", ENCRYPTION_KEY, iv);
   decipher.setAuthTag(Buffer.from(tagHex, "hex"));
   let decrypted = decipher.update(cipherHex, "hex", "utf8");
   decrypted += decipher.final("utf8");

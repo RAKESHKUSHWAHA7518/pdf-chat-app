@@ -22,11 +22,14 @@ export class MongoVectorStore {
   constructor(embeddingsModel, sessionId) {
     this.embeddingsModel = embeddingsModel;
     this.sessionId = sessionId;
+    this.indexName = env.VECTOR_SEARCH_INDEX;
   }
 
-  async addDocuments(docs) {
+  collection() { return collections.documents(); }
+
+  async addDocuments(docs, options = {}) {
     const texts = docs.map((d) => d.pageContent);
-    const vectors = await this.embeddingsModel.embedDocuments(texts);
+    const vectors = await this.embeddingsModel.embedDocuments(texts, options);
 
     if (vectors.length !== docs.length || vectors.some(vector => !vector.length || vector.some(value => !Number.isFinite(value)))) throw new Error("Embedding provider returned incomplete vectors");
     const records = vectors.map((vector, i) => ({
@@ -38,7 +41,7 @@ export class MongoVectorStore {
       expiresAt: new Date(Date.now() + 86400000),
     }));
 
-    await collections.documents().insertMany(records);
+    await this.collection().insertMany(records);
     return records.length;
   }
 
@@ -59,12 +62,12 @@ export class MongoVectorStore {
   }
 
   async atlasVectorSearch(queryVector, k, options = {}) {
-    const results = await collections
-      .documents()
+    const results = await this
+      .collection()
       .aggregate([
         {
           $vectorSearch: {
-            index: env.VECTOR_SEARCH_INDEX,
+            index: this.indexName,
             path: "embedding",
             queryVector,
             numCandidates: k * NUM_CANDIDATES_MULTIPLIER,
@@ -89,8 +92,8 @@ export class MongoVectorStore {
 
   // Local cosine search over this session's chunks (works on any MongoDB).
   async cosineFallback(queryVector, k, options = {}) {
-    const docs = await collections
-      .documents()
+    const docs = await this
+      .collection()
       .find({ sessionId: this.sessionId }, databaseOptions(options))
       .project({ text: 1, metadata: 1, embedding: 1 })
       .toArray();
@@ -106,7 +109,7 @@ export class MongoVectorStore {
   }
 
   async lexicalSearch(query, k = 20, options = {}) {
-    const records = await collections.documents().find({ sessionId: this.sessionId, $text: { $search: query.slice(0, 2000) } }, { ...databaseOptions(options), projection: { text: 1, metadata: 1, score: { $meta: "textScore" } } }).sort({ score: { $meta: "textScore" }, _id: 1 }).limit(k).toArray();
+    const records = await this.collection().find({ sessionId: this.sessionId, $text: { $search: query.slice(0, 2000) } }, { ...databaseOptions(options), projection: { text: 1, metadata: 1, score: { $meta: "textScore" } } }).sort({ score: { $meta: "textScore" }, _id: 1 }).limit(k).toArray();
     return records.map(record => new Document({ pageContent: record.text, metadata: record.metadata }));
   }
 

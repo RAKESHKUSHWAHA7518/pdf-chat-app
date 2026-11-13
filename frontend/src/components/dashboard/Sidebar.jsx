@@ -34,6 +34,7 @@ export function Sidebar({
   const navItems = [
     { label: "Chat with PDF", path: "/dashboard/chat-pdf", icon: FileText, altPath: "/app" },
     { label: "Document Vault", path: "/dashboard/documents", icon: FolderOpen },
+    { label: "GitHub Workspace", path: "/dashboard/github-workspace", icon: Github },
 
 
 

@@ -6,7 +6,7 @@ import { PDFDocument } from "pdf-lib";
 import { MongoMemoryReplSet } from "mongodb-memory-server";
 import jwt from "jsonwebtoken";
 
-Object.assign(process.env, { NODE_ENV: "test", JWT_SECRET: "isolated-regression-secret-at-least-32-characters", GEMINI_API_KEY: "unused-test-key", RAZORPAY_KEY_ID: "rzp_test_unused", RAZORPAY_KEY_SECRET: "unused-test-secret", RAZORPAY_WEBHOOK_SECRET: "test-webhook-secret", GITHUB_TOKEN_KEY: "ab".repeat(32), PUBLIC_URL: "http://localhost:3001", CORS_ORIGIN: "https://allowed.example", LOG_LEVEL: "fatal", RATE_LIMIT_MAX: "1000", MONGODB_DB: "isolated_regression" });
+Object.assign(process.env, { NODE_ENV: "test", JWT_SECRET: "isolated-regression-secret-at-least-32-characters", GEMINI_API_KEY: "unused-test-key", RAZORPAY_KEY_ID: "rzp_test_unused", RAZORPAY_KEY_SECRET: "unused-test-secret", RAZORPAY_WEBHOOK_SECRET: "test-webhook-secret", GITHUB_WORKSPACE_APP_ID: "123", GITHUB_TOKEN_KEY: "ab".repeat(32), PUBLIC_URL: "http://localhost:3001", CORS_ORIGIN: "https://allowed.example", LOG_LEVEL: "fatal", RATE_LIMIT_MAX: "1000", MONGODB_DB: "isolated_regression" });
 let mongo, server, base, db, payment, access, oauth, sessions, guest, auth;
 const userA = "user-a", userB = "user-b";
 const token = user => jwt.sign({}, process.env.JWT_SECRET, { subject: user, issuer: "devsuite-v2", audience: "devsuite-api", expiresIn: "1h" });
@@ -324,4 +324,59 @@ test("reranker cancellation exits even if a model does not settle", async () => 
   const work = buildRAGChain(store,model).prepare({question:"q",history:[]},{signal:controller.signal});
   setTimeout(()=>controller.abort(new Error("stop reranker")),20);
   await assert.rejects(work,/stop reranker/);
+});
+
+test("repository OAuth purposes and authenticated encryption are isolated", async () => {
+  const {encryptToken,decryptToken}=await import("../src/services/githubService.js");
+  const encrypted=encryptToken("private-token-test");
+  assert.equal(decryptToken(encrypted),"private-token-test");
+  assert.throws(()=>decryptToken(encrypted.slice(0,-2)+"00"));
+  const state=await oauth.createOAuthState(userA,"workspace");
+  await assert.rejects(oauth.consumeOAuthState(state.state,state.browserSecret),{code:"INVALID_OAUTH_STATE"});
+  assert.equal(await oauth.consumeOAuthState(state.state,state.browserSecret,"workspace"),userA);
+});
+
+test("repository import pins code, skips sensitive files and preserves the last successful snapshot",async()=>{
+  const {runImport,authorizeWorkspace,reserveRepositoryBudget}=await import("../src/services/repository/workspace.js");
+  const {env}=await import("../src/config/env.js");
+  const sha="a".repeat(40), id=crypto.randomUUID();
+  const workspace={_id:id,userId:userA,owner:"owner",repo:"project",branch:"main",installationId:5,repositoryId:8,leaseId:"first",status:"indexing"};
+  await db.collections.repoWorkspaces().insertOne(workspace);
+  const source="export function login() { return true; }";
+  const client={paginate:async route=>route==="GET /user/installations"?[{id:5,app_id:env.GITHUB_WORKSPACE_APP_ID,permissions:{contents:"read",metadata:"read"}}]:[{id:8}],rest:{repos:{getCommit:async()=>({data:{sha,commit:{tree:{sha}}}})},git:{getTree:async()=>({data:{truncated:false,tree:[{path:"src/login.js",type:"blob",sha,size:source.length},{path:".env",type:"blob",sha,size:10}]}}),getBlob:async()=>({data:{encoding:"base64",size:source.length,content:Buffer.from(source).toString("base64")}})}}};
+  const embeddings={embedDocuments:async texts=>texts.map(()=>[1,0,0])};
+  await runImport(workspace,client,embeddings);
+  const updated=await db.collections.repoWorkspaces().findOne({_id:id});
+  assert.equal(updated.indexedSha,sha);assert.equal(updated.status,"current");
+  const chunks=await db.collections.repoChunks().find({sessionId:updated.activeSnapshotId}).toArray();
+  assert.equal(chunks.length,1);assert.equal(chunks[0].metadata.startLine,1);assert.equal(chunks[0].expiresAt,undefined);
+  assert.equal(await db.collections.documents().countDocuments({sessionId:updated.activeSnapshotId}),0);
+  const snapshot=await db.collections.repoSnapshots().findOne({_id:updated.activeSnapshotId});
+  assert.equal(snapshot.coverage.find(row=>row.path===".env").status,"skipped");
+  await assert.rejects(authorizeWorkspace(userB,id,client),{code:"WORKSPACE_NOT_FOUND"});
+  await db.collections.repoWorkspaces().updateOne({_id:id},{$set:{leaseId:"second",status:"indexing"}});
+  const failing={...client,rest:{...client.rest,git:{...client.rest.git,getTree:async()=>({data:{truncated:true}})}}};
+  await assert.rejects(runImport({...workspace,leaseId:"second"},failing,embeddings));
+  assert.equal((await db.collections.repoWorkspaces().findOne({_id:id})).activeSnapshotId,updated.activeSnapshotId);
+  assert.equal((await request(`/api/repositories/workspaces/${id}`,{headers:headers(userB)})).status,404);
+  for(let i=0;i<3;i++)await reserveRepositoryBudget(userB,"imports",3);
+  await assert.rejects(reserveRepositoryBudget(userB,"imports",3),{code:"REPOSITORY_QUOTA"});
+});
+
+
+test("repository chat scopes retrieval and rejects fabricated citations",async()=>{
+ const {answerRepositoryQuestion}=await import("../src/services/repository/chat.js");
+ const {RepositoryStore}=await import("../src/services/repository/store.js");
+ const sha="b".repeat(40), snapshot=crypto.randomUUID();
+ const embeddings={embedQuery:async()=>[1,0,0]};
+ await db.collections.repoChunks().insertOne({sessionId:snapshot,text:"authentication login handler",embedding:[1,0,0],metadata:{chunkId:"code-test",path:"auth.js",startLine:1,endLine:2}});
+ const store=new RepositoryStore(embeddings,snapshot);
+ assert.equal((await store.cosineFallback([1,0,0],4)).length,1);
+ assert.equal((await new RepositoryStore(embeddings,"another-snapshot").cosineFallback([1,0,0],4)).length,0);
+ const workspace={owner:"owner",repo:"project",indexedSha:sha,activeSnapshotId:snapshot};
+ const valid=await answerRepositoryQuestion(workspace,"login",{store,model:{invoke:async()=>({content:"Authentication handler [S1]"})}});
+ assert.equal(valid.sources[0].path,"auth.js");assert.ok(valid.sources[0].url.includes(sha));
+ const invalid=await answerRepositoryQuestion(workspace,"login",{store,model:{invoke:async()=>({content:"Invented behavior [S99]"})}});
+ assert.equal(invalid.sources.length,0);assert.match(invalid.answer,/valid code citations/);
+ assert.equal((await request("/api/repositories/workspaces",{method:"POST",headers:headers(userA),body:JSON.stringify({installationId:"bad"})})).status,400);
 });

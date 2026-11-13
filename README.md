@@ -94,3 +94,9 @@ Retired tools: profile/bio generation, resume-to-README and cover-letter generat
 ### RAG reliability and evaluation
 
 Hybrid retrieval can continue with one search branch and reports degraded status. Both branches failing returns an error. Failed reranking requests a retry instead of generating an answer from unverified passages. Chat cancellation propagates to embedding requests and database queries with execution limits. /api/ready checks search-index readiness separately from /api/health. See backend/evaluation/README.md for the synthetic starter dataset and offline metrics runner. No live-model accuracy result is claimed.
+
+## GitHub Workspace
+
+The product direction is documented in [GitHub Intelligence PRD](docs/GITHUB_INTELLIGENCE_PRD.md). Read-only repository import and cited code questions are implemented in the first milestone. Evidence-linked diagrams, automatic synchronization and PR change review remain planned.
+
+GitHub Workspace M1 implementation and deployment steps: [setup and limitations](docs/GITHUB_WORKSPACE_SETUP.md).

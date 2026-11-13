@@ -66,6 +66,9 @@ function getDb() {
 }
 
 export const collections = {
+  repoWorkspaces: () => getDb().collection("repo_workspaces"),
+  repoSnapshots: () => getDb().collection("repo_snapshots"),
+  repoChunks: () => getDb().collection("repo_chunks"),
   users: () => getDb().collection("users"),
   guestUsage: () => getDb().collection("guest_usage"),
   documents: () => getDb().collection("documents"),
@@ -104,6 +107,10 @@ export async function ensureIndexes() {
   await collections.userDocuments().createIndex({ userId: 1, createdAt: -1 });
   await collections.oauthStates().createIndex({ expiresAt: 1 }, { expireAfterSeconds: 0 });
   await collections.documents().createIndex({ expiresAt: 1 }, { expireAfterSeconds: 0 });
+  await collections.repoWorkspaces().createIndex({ userId: 1, createdAt: -1 });
+  await collections.repoSnapshots().createIndex({ workspaceId: 1, createdAt: -1 });
+  await collections.repoChunks().createIndex({ sessionId: 1, text: "text" }, { name: "repo_lexical" });
+  await collections.repoChunks().createIndex({ expiresAt: 1 }, { expireAfterSeconds: 0 });
   // Payment indexes
   await collections.payments().createIndex({ userId: 1, createdAt: -1 });
   await collections.payments().createIndex({ razorpayOrderId: 1 }, { unique: true, sparse: true });

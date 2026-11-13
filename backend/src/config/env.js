@@ -57,6 +57,10 @@ const envSchema = z.object({
   RAZORPAY_PRO_MONTHLY_AMOUNT: z.coerce.number().int().positive().default(29900),
   RAZORPAY_PRO_YEARLY_AMOUNT: z.coerce.number().int().positive().default(299900),
 
+  GITHUB_WORKSPACE_APP_ID: z.string().optional(),
+  GITHUB_WORKSPACE_CLIENT_ID: z.string().optional(),
+  GITHUB_WORKSPACE_CLIENT_SECRET: z.string().optional(),
+  GITHUB_WORKSPACE_INSTALL_URL: z.string().url().optional(),
   // GitHub OAuth (optional)
   GITHUB_CLIENT_ID: z.string().optional(),
   GITHUB_CLIENT_SECRET: z.string().optional(),

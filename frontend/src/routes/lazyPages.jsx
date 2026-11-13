@@ -1,4 +1,5 @@
 import { lazy } from "react";
+export const GithubWorkspace = lazy(() => import("../pages/GithubWorkspace.jsx"));
 export const LandingPage = lazy(() => import("../pages/LandingPage").then(m => ({ default: m.LandingPage })));
 export const LoginPage = lazy(() => import("../pages/LoginPage").then(m => ({ default: m.LoginPage })));
 export const SignupPage = lazy(() => import("../pages/SignupPage").then(m => ({ default: m.SignupPage })));

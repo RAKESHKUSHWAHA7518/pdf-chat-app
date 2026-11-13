@@ -6,14 +6,17 @@ import { logger } from "./lib/logger.js";
 import { connectDatabase, ensureIndexes, ensureVectorSearchIndex, closeDatabase } from "./db/database.js";
 import { probeEmbeddingDimensions } from "./services/ragService.js";
 import { sessionService } from "./services/sessionService.js";
+import { startRepositoryWorker } from "./services/repository/workspace.js";
 
 const app = createApp();
 let server;
+let stopRepositoryWorker = () => {};
 
 async function main() {
   // 1. Database must be up before we accept traffic (fail fast otherwise)
   await connectDatabase();
   await ensureIndexes();
+  stopRepositoryWorker = startRepositoryWorker();
   await recoverAbandonedOperations();
   setInterval(() => recoverAbandonedOperations().catch(err => logger.error({ err }, "Operation recovery failed")), 60000).unref();
 
@@ -39,6 +42,7 @@ async function main() {
 // Graceful shutdown — finish in-flight requests, then exit
 // ─────────────────────────────────────────────
 function shutdown(signal) {
+  stopRepositoryWorker();
   logger.info({ signal }, "Shutdown signal received, draining connections");
   const close = server ? new Promise((resolve) => server.close(resolve)) : Promise.resolve();
   close.then(async () => {

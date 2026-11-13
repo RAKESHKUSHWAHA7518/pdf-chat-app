@@ -15,6 +15,7 @@ import { sessionRouter } from "./routes/session.routes.js";
 import { documentRouter } from "./routes/document.routes.js";
 import { paymentRouter } from "./routes/payment.routes.js";
 import { githubRouter } from "./routes/github.routes.js";
+import { repositoryRouter } from "./routes/repository.routes.js";
 import { careerRouter } from "./routes/career.routes.js";
 import { apiLimiter } from "./middleware/rateLimiter.js";
 import { optionalAuth, guestIdentity } from "./middleware/auth.js";
@@ -87,6 +88,7 @@ export function createApp() {
   app.use("/api", sessionRouter);
   app.use("/api/payments", paymentRouter);
   app.use("/api/github", githubRouter);
+  app.use("/api/repositories", repositoryRouter);
   app.use("/api/career", careerRouter);
 
   // Serve React Frontend static assets if dist exists
