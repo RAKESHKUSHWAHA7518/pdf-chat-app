@@ -7,6 +7,8 @@ dist/
 frontend/dist/
 
 # Environment Secrets — NEVER commit
+.env
+.env.*
 !.env.example
 backend/.env
 frontend/.env
@@ -22,6 +24,6 @@ npm-debug.log*
 # System & IDE files
 .DS_Store
 Thumbs.db
+.vscode/
 .idea/
 .mcp.json
-config.bat
